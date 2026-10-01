@@ -126,6 +126,11 @@ html, body {
 .btn:active { transform: scale(0.97); }
 .btn--primary { background: var(--napas); color: var(--paru); }
 .btn--quiet   { background: transparent; color: var(--embun); border-color: var(--garis); }
+.btn:disabled { opacity: 0.38; cursor: default; }
+.btn:disabled:active { transform: none; }
+
+/* Pesan gagal memakai warna "salah" agar tidak terlewat */
+.hint[data-state]:not([data-state="starting"]):not([data-state="ready"]) { color: var(--kapiler); }
 
 :focus-visible { outline: 3px solid var(--napas); outline-offset: 3px; }
 

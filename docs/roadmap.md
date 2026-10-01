@@ -14,7 +14,7 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M0.4a Token desain dasar di `css/app.css` (palet, tipografi, jarak, gerak; ukuran relatif ke sisi terpendek layar)
 - [x] M0.4b `ScreenManager` + alur layar dasar (Home → Kalibrasi → Game → Hasil)
 - [x] M0.6 Tetapkan prinsip desain UI/UX: clean, elegan, unik, sembunyikan kompleksitas (blueprint bagian 13)
-- [ ] M0.7 Tinjau arah visual "udara & paru" (palet, gelembung kaca) dan konfirmasi atau ganti
+- [x] M0.7 Arah visual "udara & paru" (palet, gelembung kaca) disetujui
 - [ ] M0.5 Pastikan cara menjalankan lewat server lokal (HTTPS/localhost) di HP
 
 **DoD:** folder proyek jalan, halaman kosong terbuka di browser HP.
@@ -22,15 +22,16 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 ---
 
 ## M1 — Kamera
-- [ ] M1.1 `CameraManager.js`: minta izin kamera
-- [ ] M1.2 Aktifkan kamera depan, atur resolusi (target 640×480)
-- [ ] M1.3 Tampilkan preview video penuh layar + mirror
-- [ ] M1.4 Tangani error (izin ditolak, kamera dipakai app lain)
-- [ ] M1.5 Fungsi stop/restart kamera saat pindah layar
-- [ ] M1.6 Layout fullscreen yang mengikuti orientasi perangkat (tanpa kunci), video mengisi viewport dengan `cover`
-- [ ] M1.7 Deteksi perubahan ukuran/orientasi (`resize`/`orientationchange`) dan resize ulang video + canvas
+- [x] M1.1 `CameraManager.js`: minta izin kamera
+- [x] M1.2 Aktifkan kamera depan, atur resolusi (target 640×480; jika perangkat tidak bisa, otomatis coba tanpa syarat)
+- [x] M1.3 Tampilkan preview video penuh layar + mirror (mirror hanya untuk kamera depan; layar penuh diminta saat menekan "Mulai", bila didukung)
+- [x] M1.4 Tangani error (izin ditolak, kamera tidak ada, dipakai app lain, bukan https/localhost, browser tidak mendukung) dengan pesan jelas + tombol "Coba lagi" yang hanya muncul saat gagal
+- [x] M1.5 Fungsi stop/restart kamera saat pindah layar; kamera juga mati saat tab/aplikasi tidak terlihat dan menyala lagi saat kembali
+- [x] M1.6 Layout fullscreen yang mengikuti orientasi perangkat (tanpa kunci), video mengisi viewport dengan `cover`
+- [x] M1.7 Deteksi perubahan ukuran/orientasi (`resize`/`orientationchange`) dan resize ulang canvas (`ui/Viewport.js`)
+- [ ] M1.8 **Tes di perangkat asli**: HP (portrait + landscape) dan TV sekolah; catat apa yang meleset
 
-**DoD:** kamera tampil mulus, bisa stop/start tanpa reload.
+**DoD:** kamera tampil mulus, bisa stop/start tanpa reload. (Logika `CameraManager` sudah diuji dengan kamera tiruan; yang tersisa M1.8, uji di perangkat asli.)
 
 ---
 

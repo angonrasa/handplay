@@ -112,7 +112,8 @@ handplay-ar/
 │   └── ui/
 │       ├── HUD.js
 │       ├── FeedbackPanel.js       (penjelasan benar/salah)
-│       └── ScreenManager.js
+│       ├── ScreenManager.js
+│       └── Viewport.js            (ukuran area tampilan + orientasi, sinkron ke canvas)
 ├── data/
 │   ├── games.json                 (config mode: durasi, nyawa, kecepatan)
 │   ├── settings.json

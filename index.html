@@ -25,7 +25,7 @@
       <div class="home__copy">
         <h1 class="title">HandPlay</h1>
         <p class="lede">Pecahkan gelembung yang berisi jawaban benar, hanya dengan tanganmu.</p>
-        <button class="btn btn--primary" data-goto="calibration">Mulai</button>
+        <button class="btn btn--primary" data-goto="calibration" data-fullscreen>Mulai</button>
       </div>
       <div class="bubble bubble--hero" aria-hidden="true"></div>
     </section>
@@ -33,11 +33,12 @@
     <section class="screen screen--calibration" data-screen="calibration" hidden>
       <div class="screen__body">
         <h2 class="heading">Arahkan tanganmu ke kamera</h2>
-        <p class="hint">Tahap kamera dan pelacakan tangan menyusul.</p>
+        <p class="hint" id="camera-status" aria-live="polite"></p>
       </div>
       <div class="actions">
         <button class="btn btn--quiet" data-goto="home">Kembali</button>
-        <button class="btn btn--primary" data-goto="game">Lanjut</button>
+        <button class="btn btn--quiet" id="camera-retry" data-camera-retry hidden>Coba lagi</button>
+        <button class="btn btn--primary" id="camera-continue" data-goto="game" disabled>Lanjut</button>
       </div>
     </section>
 

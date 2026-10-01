@@ -23,4 +23,4 @@ Jalankan server statis dari folder ini, lalu buka `http://localhost:<port>`.
 
 ## Status
 
-M0 (kerangka) selesai. Modul yang masih kosong ditandai `TODO(Mx.y)` di dalam filenya, sesuai nomor subtask di roadmap.
+M0 (kerangka) dan M1 (kamera) selesai di kode; uji di perangkat asli (M1.8) belum. Modul yang masih kosong ditandai `TODO(Mx.y)` di dalam filenya, sesuai nomor subtask di roadmap.
