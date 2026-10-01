@@ -1,0 +1,134 @@
+/* ==========================================================================
+   app.css — token desain, dasar, layar, tombol.
+   Prinsip: bersih, elegan, unik, kompleksitas disembunyikan sampai dibutuhkan.
+   Semua ukuran relatif ke sisi terpendek layar (--u), agar sama baiknya di HP
+   (portrait/landscape) dan TV besar.
+   ========================================================================== */
+
+:root {
+  /* Palet — usulan arah visual "udara & paru" */
+  --paru:    #0C2B2E;   /* dasar */
+  --kabut:   #123F43;   /* permukaan terangkat */
+  --embun:   #E9F2EE;   /* teks utama */
+  --napas:   #8EDDCB;   /* aksen: benar / aksi utama */
+  --kapiler: #F2707B;   /* salah */
+  --embun-redup: rgba(233, 242, 238, 0.68);
+  --garis:       rgba(233, 242, 238, 0.18);
+
+  /* Satuan relatif: 1u = 1% dari sisi terpendek layar */
+  --u: min(1vw, 1vh);
+
+  /* Tipografi (font sistem dulu; font khusus dibundel di assets/fonts nanti) */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fs-title:   clamp(2.6rem, calc(var(--u) * 11), 9rem);
+  --fs-heading: clamp(1.6rem, calc(var(--u) * 5.2), 4.5rem);
+  --fs-body:    clamp(1rem,   calc(var(--u) * 3),   2.2rem);
+  --fs-button:  clamp(1.05rem, calc(var(--u) * 3.2), 2.2rem);
+
+  /* Jarak */
+  --s1: calc(var(--u) * 1);
+  --s2: calc(var(--u) * 2);
+  --s3: calc(var(--u) * 4);
+  --s4: calc(var(--u) * 7);
+
+  /* Gerak */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur: 240ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--paru);
+  color: var(--embun);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ---------- Layar ---------- */
+
+.screens {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding:
+    calc(var(--s3) + env(safe-area-inset-top, 0px))
+    calc(var(--s3) + env(safe-area-inset-right, 0px))
+    calc(var(--s3) + env(safe-area-inset-bottom, 0px))
+    calc(var(--s3) + env(safe-area-inset-left, 0px));
+}
+
+.screen__body { margin-block: auto; max-width: 30em; }
+
+.title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.heading {
+  margin: 0 0 var(--s2);
+  font-size: var(--fs-heading);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.lede { margin: var(--s2) 0 var(--s3); max-width: 24em; color: var(--embun-redup); }
+.hint { margin: 0; color: var(--embun-redup); max-width: 28em; }
+
+/* ---------- Home ---------- */
+
+.screen--home {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--s3);
+}
+.home__copy { position: relative; z-index: 1; max-width: 34em; }
+
+/* Portrait: teks di atas, gelembung di bawah */
+@media (orientation: portrait) {
+  .screen--home { flex-direction: column; align-items: flex-start; justify-content: center; }
+}
+
+/* ---------- Tombol ---------- */
+
+.actions { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
+.actions--end { justify-content: flex-end; }
+
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  min-height: max(48px, calc(var(--u) * 9));
+  padding: 0 calc(var(--u) * 5);
+  font: inherit;
+  font-size: var(--fs-button);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.btn:active { transform: scale(0.97); }
+.btn--primary { background: var(--napas); color: var(--paru); }
+.btn--quiet   { background: transparent; color: var(--embun); border-color: var(--garis); }
+
+:focus-visible { outline: 3px solid var(--napas); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

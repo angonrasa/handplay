@@ -1,0 +1,29 @@
+{
+  "bankId": "pernapasan-8",
+  "title": "Sistem Pernapasan",
+  "items": [
+    {
+      "id": "q001",
+      "type": "pick-correct",
+      "prompt": "Organ tempat pertukaran O₂ dan CO₂ di paru-paru?",
+      "correct": ["Alveolus"],
+      "distractors": ["Trakea", "Bronkus", "Faring"],
+      "explain": "Pertukaran gas terjadi di alveolus karena dindingnya sangat tipis dan dikelilingi kapiler darah."
+    },
+    {
+      "id": "q002",
+      "type": "group",
+      "prompt": "Pecahkan semua yang termasuk saluran pernapasan",
+      "correct": ["Laring", "Trakea", "Bronkus"],
+      "distractors": ["Esofagus", "Lambung", "Jantung"],
+      "explain": "Esofagus dan lambung termasuk sistem pencernaan."
+    },
+    {
+      "id": "q003",
+      "type": "sequence",
+      "prompt": "Urutan jalur udara saat inhalasi",
+      "sequence": ["Rongga hidung", "Faring", "Laring", "Trakea", "Bronkus", "Bronkiolus", "Alveolus"],
+      "explain": "Udara masuk dari luar menuju alveolus melalui saluran yang makin kecil."
+    }
+  ]
+}
