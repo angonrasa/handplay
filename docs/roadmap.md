@@ -29,6 +29,7 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M1.5 Fungsi stop/restart kamera saat pindah layar; kamera juga mati saat tab/aplikasi tidak terlihat dan menyala lagi saat kembali
 - [x] M1.6 Layout fullscreen yang mengikuti orientasi perangkat (tanpa kunci), video mengisi viewport dengan `cover`
 - [x] M1.7 Deteksi perubahan ukuran/orientasi (`resize`/`orientationchange`) dan resize ulang canvas (`ui/Viewport.js`)
+- [x] M1.9 Mode `?debug`: pasang `js/debug/bootstrap.js` di `index.html` (sebelumnya belum terpasang, jadi eruda dan panel tidak pernah muncul); eruda diperbesar otomatis di layar besar
 - [ ] M1.8 **Tes di perangkat asli**: HP (portrait + landscape) dan TV sekolah; catat apa yang meleset
 
 **DoD:** kamera tampil mulus, bisa stop/start tanpa reload. (Logika `CameraManager` sudah diuji dengan kamera tiruan; yang tersisa M1.8, uji di perangkat asli.)

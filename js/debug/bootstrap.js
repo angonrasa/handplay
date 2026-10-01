@@ -96,6 +96,11 @@
   function initEruda() {
     try {
       window.eruda.init();
+      // Layar TV besar: perbesar tombol dan panel eruda agar terbaca dari jauh.
+      try {
+        var w = Math.max(window.innerWidth || 0, window.screen ? window.screen.width : 0);
+        if (w >= 1200 && window.eruda.scale) window.eruda.scale(w >= 1800 ? 2 : 1.5);
+      } catch (e2) { /* abaikan */ }
       for (var i = 0; i < hp.errors.length; i++) console.error('[handplay] (sebelum eruda) ' + hp.errors[i]);
     } catch (e) {
       record('eruda gagal dijalankan: ' + e);
