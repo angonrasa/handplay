@@ -45,7 +45,12 @@ viewport.start();
 // Layar besar (TV/papan interaktif) butuh gambar kamera lebih tajam; 640×480 jadi buram saat diperbesar.
 // Resolusi hanya preferensi: kamera yang tidak sanggup otomatis dapat resolusi terdekat.
 const bigScreen = Math.max(window.innerWidth, window.screen ? window.screen.width : 0) >= 1200;
-const camera = new CameraManager(video, bigScreen ? { width: 1920, height: 1080 } : {});
+// Ujicoba lewat alamat: ?cam=480|720|1080 (resolusi kamera), ?det=240|360|480|720|0 (tinggi gambar untuk deteksi; 0 = ukuran asli).
+const query = new URLSearchParams(window.location.search);
+const CAM_SIZES = { 480: [640, 480], 720: [1280, 720], 1080: [1920, 1080] };
+const camParam = CAM_SIZES[query.get('cam')];
+const camSize = camParam ? { width: camParam[0], height: camParam[1] } : bigScreen ? { width: 1920, height: 1080 } : {};
+const camera = new CameraManager(video, camSize);
 
 // Zoom digital: membuat tangan terlihat lebih dekat di layar besar tanpa mendekatkan kamera.
 // Urutan: ?zoom=1.5 di alamat > nilai tersimpan (tombol Zoom di panel ?debug) > bawaan.
@@ -56,7 +61,7 @@ function clampZoom(z) {
   return Number.isFinite(z) ? Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100)) : NaN;
 }
 function initialZoom() {
-  const fromUrl = clampZoom(parseFloat(new URLSearchParams(window.location.search).get('zoom')));
+  const fromUrl = clampZoom(parseFloat(query.get('zoom')));
   if (!Number.isNaN(fromUrl)) return fromUrl;
   try {
     const saved = clampZoom(parseFloat(window.localStorage.getItem(ZOOM_KEY)));
@@ -124,7 +129,8 @@ function releaseCamera() {
 
 // ---------- Hand tracking (M2) ----------
 
-const tracker = new HandTracker({ numHands: 1 });
+const detParam = parseInt(query.get('det'), 10);
+const tracker = new HandTracker({ numHands: 1, ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }) });
 const mapper = new LandmarkMapper();
 const skeleton = new SkeletonOverlay(overlay, mapper);
 let trackRun = 0;

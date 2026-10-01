@@ -28,6 +28,7 @@ export function buildReport(env) {
 
   const cam = env.camera || {};
   add('Kamera di aplikasi', cam.active ? `aktif ${cam.width}×${cam.height}` : 'tidak aktif');
+  if (cam.active) add('FPS kamera', cam.frameRate ? String(cam.frameRate) : 'tidak dilaporkan');
   if (cam.active) add('Resolusi maks kamera', cam.maxWidth ? `${cam.maxWidth}×${cam.maxHeight}` : 'tidak dilaporkan');
   if (env.zoom) add('Zoom digital', `${env.zoom}x`);
   if (env.lastError) {
@@ -47,6 +48,7 @@ export function buildReport(env) {
     add('Tangan terdeteksi', t.running ? String(t.hands) : '-');
     add('Delegate', t.delegate || '-');
     add('Sumber MediaPipe', t.source || '-');
+    add('Input deteksi', t.inputSize ? `${t.inputSize.width}×${t.inputSize.height}` : '-');
     if (t.error) {
       add('Galat pelacak', t.error.code || '-');
       add('  rincian', t.error.detail || '-');
@@ -155,6 +157,7 @@ async function gatherEnv(ctx) {
     camera: {
       active: ctx.camera.active,
       ...ctx.camera.size,
+      frameRate: ctx.camera.frameRate,
       maxWidth: ctx.camera.maxSize && ctx.camera.maxSize.width,
       maxHeight: ctx.camera.maxSize && ctx.camera.maxSize.height,
     },

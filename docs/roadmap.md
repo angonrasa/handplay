@@ -46,7 +46,9 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M2.4 Output 21 landmark + handedness (`toHands`, diuji dengan data tiruan)
 - [x] M2.5 Overlay canvas: gambar skeleton + titik landmark (`ui/SkeletonOverlay.js`; tombol on/off di panel `?debug`)
 - [x] M2.6 Ukur FPS dan tampilkan di panel debug (FPS, ms per deteksi, jumlah tangan, delegate, galat)
-- [ ] M2.7 **Tes di HP asli**, catat FPS; tentukan resolusi/delegate terbaik
+- [x] M2.5a Uji awal di papan Hisense 75WM61FE (Chrome 150, MediaPipe dari CDN, delegate GPU, kamera 1920×1080): skeleton muncul dan pas di tangan, tetapi hanya 5–6 FPS (±170 ms per deteksi) dan terasa delay
+- [x] M2.8 Percepat deteksi: video diperkecil ke 360 px tinggi (rasio sama) sebelum masuk MediaPipe, video tampilan tetap 1080p (`inputHeight` di `HandTracker`); alamat uji `?det=240|360|480|720|0` dan `?cam=480|720|1080`; panel menampilkan FPS kamera dan ukuran input deteksi (belum diukur ulang di papan)
+- [ ] M2.7 **Tes di HP asli**, catat FPS; tentukan resolusi/delegate terbaik (papan: lihat M2.5a dan M2.8; HP belum)
 
 **DoD:** skeleton tangan mengikuti gerakan, FPS terukur dan layak (target ≥ 20 FPS).
 

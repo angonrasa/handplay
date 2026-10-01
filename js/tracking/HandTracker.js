@@ -77,9 +77,18 @@ async function pickSource() {
 }
 
 export class HandTracker {
-  /** @param {{ numHands?: number, delegate?: 'GPU'|'CPU' }} [options] */
-  constructor({ numHands = 1, delegate = 'GPU' } = {}) {
+  /**
+   * @param {{ numHands?: number, delegate?: 'GPU'|'CPU', inputHeight?: number, createCanvas?: () => HTMLCanvasElement }} [options]
+   *   inputHeight: tinggi gambar yang diberikan ke MediaPipe (px). Video 1080p diperkecil dulu
+   *   karena deteksi di resolusi penuh lambat di perangkat lemah (TV/papan). 0 = pakai ukuran asli.
+   */
+  constructor({ numHands = 1, delegate = 'GPU', inputHeight = 360, createCanvas = null } = {}) {
     this.numHands = numHands; // MVP: satu tangan; angka ini parameter, bukan hard-code
+    this.inputHeight = inputHeight;
+    this._createCanvas = createCanvas || (() => document.createElement('canvas'));
+    this._canvas = null;
+    this._ctx = null;
+    this.inputSize = null; // ukuran gambar yang benar-benar diberikan ke MediaPipe
     this.delegatePref = delegate;
     this.source = null; // 'lokal' | 'cdn'
     this.delegate = null; // delegate yang benar-benar dipakai (GPU bisa jatuh ke CPU)
@@ -185,12 +194,12 @@ export class HandTracker {
 
     const tick = () => {
       if (run !== this._run) return;
-      if (video.readyState >= 2 && video.videoWidth > 0) {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
         const t0 = performance.now();
         const ts = Math.max(t0, this._lastTs + 1);
         this._lastTs = ts;
         try {
-          const hands = this.detect(video, ts);
+          const hands = this.detect(this._source(video), ts);
           failures = 0;
           this._record(performance.now() - t0, hands.length);
           onResult(hands);
@@ -208,6 +217,28 @@ export class HandTracker {
       schedule(tick);
     };
     schedule(tick);
+  }
+
+  /** Frame yang dikirim ke MediaPipe: video penuh, atau salinan yang diperkecil (rasio sama, jadi koordinat 0..1 tetap berlaku). */
+  _source(video) {
+    const vh = video.videoHeight;
+    if (!this.inputHeight || vh <= this.inputHeight) {
+      this.inputSize = { width: video.videoWidth, height: vh };
+      return video;
+    }
+    if (!this._canvas) {
+      this._canvas = this._createCanvas();
+      this._ctx = this._canvas.getContext('2d', { alpha: false });
+    }
+    const h = this.inputHeight;
+    const w = Math.round((video.videoWidth / vh) * h);
+    if (this._canvas.width !== w || this._canvas.height !== h) {
+      this._canvas.width = w;
+      this._canvas.height = h;
+    }
+    this._ctx.drawImage(video, 0, 0, w, h);
+    this.inputSize = { width: w, height: h };
+    return this._canvas;
   }
 
   stop() {
@@ -236,6 +267,7 @@ export class HandTracker {
       hands: this.handCount,
       delegate: this.delegate,
       source: this.source,
+      inputSize: this.inputSize,
       error: this.error ? { code: this.error.code, detail: this.error.detail || this.error.message } : null,
     };
   }

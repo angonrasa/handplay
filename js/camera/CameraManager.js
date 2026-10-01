@@ -65,6 +65,13 @@ export class CameraManager {
     return { width: caps.width.max, height: caps.height.max };
   }
 
+  /** Frame rate yang dilaporkan kamera (bisa turun di ruangan gelap). Null bila tidak dilaporkan. */
+  get frameRate() {
+    const track = this.stream && this.stream.getVideoTracks()[0];
+    const settings = track && track.getSettings ? track.getSettings() : null;
+    return settings && settings.frameRate ? Math.round(settings.frameRate) : null;
+  }
+
   /** Menyalakan kamera. Aman dipanggil berulang. Resolve dengan ukuran video. */
   start() {
     if (this.stream) return Promise.resolve(this.size);
