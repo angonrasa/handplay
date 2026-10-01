@@ -21,11 +21,12 @@
 
 .camera {
   object-fit: cover;
+  transform: scale(var(--zoom, 1)); /* zoom digital; diatur dari app.js */
 }
 
 /* Mirror hanya untuk kamera depan, agar gerakan terasa natural */
 .camera.is-mirrored {
-  transform: scaleX(-1);
+  transform: scaleX(-1) scale(var(--zoom, 1));
 }
 
 /* Veil: menenangkan gambar kamera supaya gelembung dan teks tetap terbaca */

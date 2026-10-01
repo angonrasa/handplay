@@ -28,6 +28,8 @@ export function buildReport(env) {
 
   const cam = env.camera || {};
   add('Kamera di aplikasi', cam.active ? `aktif ${cam.width}×${cam.height}` : 'tidak aktif');
+  if (cam.active) add('Resolusi maks kamera', cam.maxWidth ? `${cam.maxWidth}×${cam.maxHeight}` : 'tidak dilaporkan');
+  if (env.zoom) add('Zoom digital', `${env.zoom}x`);
   if (env.lastError) {
     const e = env.lastError;
     add('Galat kamera terakhir', e.code || '-');
@@ -35,6 +37,20 @@ export function buildReport(env) {
     add('  pesan asli', e.causeMessage || '-');
   } else {
     add('Galat kamera terakhir', 'tidak ada');
+  }
+
+  const t = env.tracker;
+  if (t) {
+    add('Pelacak tangan', t.running ? 'berjalan' : t.status);
+    add('FPS deteksi', t.running ? String(t.fps) : '-');
+    add('Waktu per deteksi', t.running ? `${t.detectMs} ms` : '-');
+    add('Tangan terdeteksi', t.running ? String(t.hands) : '-');
+    add('Delegate', t.delegate || '-');
+    add('Sumber MediaPipe', t.source || '-');
+    if (t.error) {
+      add('Galat pelacak', t.error.code || '-');
+      add('  rincian', t.error.detail || '-');
+    }
   }
 
   add('Layar aktif', env.screen || '-');
@@ -136,7 +152,13 @@ async function gatherEnv(ctx) {
     hasGetUserMedia: !!(md && md.getUserMedia),
     cameraPermission,
     devices,
-    camera: { active: ctx.camera.active, ...ctx.camera.size },
+    camera: {
+      active: ctx.camera.active,
+      ...ctx.camera.size,
+      maxWidth: ctx.camera.maxSize && ctx.camera.maxSize.width,
+      maxHeight: ctx.camera.maxSize && ctx.camera.maxSize.height,
+    },
+    zoom: ctx.getZoom ? ctx.getZoom() : null,
     lastError: lastError
       ? {
           code: lastError.code,
@@ -144,6 +166,7 @@ async function gatherEnv(ctx) {
           causeMessage: lastError.cause && lastError.cause.message,
         }
       : null,
+    tracker: ctx.getTrackerStats ? ctx.getTrackerStats() : null,
     screen: ctx.getScreen(),
     viewport: ctx.getViewport(),
     screenSize: window.screen ? `${window.screen.width}×${window.screen.height}` : null,
@@ -155,7 +178,8 @@ async function gatherEnv(ctx) {
 
 /**
  * Memasang panel di layar.
- * @param {{ camera, getScreen: ()=>string, getViewport: ()=>object, getLastCameraError: ()=>Error|null }} ctx
+ * @param {{ camera, getScreen: ()=>string, getViewport: ()=>object, getLastCameraError: ()=>Error|null,
+ *           getTrackerStats?: ()=>object, getZoom?: ()=>number, changeZoom?: (d:number)=>number, isSkeletonOn?: ()=>boolean, toggleSkeleton?: ()=>boolean }} ctx
  */
 export function mountDebugPanel(ctx) {
   const root = document.createElement('div');
@@ -209,6 +233,15 @@ export function mountDebugPanel(ctx) {
     testBtn.disabled = false;
     refresh(true);
   });
+  if (ctx.changeZoom) {
+    button('Zoom −', () => { ctx.changeZoom(-0.1); refresh(false); });
+    button('Zoom +', () => { ctx.changeZoom(0.1); refresh(false); });
+  }
+  if (ctx.toggleSkeleton) {
+    const skel = button(ctx.isSkeletonOn() ? 'Skeleton: nyala' : 'Skeleton: mati', () => {
+      skel.textContent = ctx.toggleSkeleton() ? 'Skeleton: nyala' : 'Skeleton: mati';
+    });
+  }
   const toggle = button('Sembunyikan', () => {
     expanded = !expanded;
     out.hidden = !expanded;

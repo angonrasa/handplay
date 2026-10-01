@@ -30,20 +30,22 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M1.6 Layout fullscreen yang mengikuti orientasi perangkat (tanpa kunci), video mengisi viewport dengan `cover`
 - [x] M1.7 Deteksi perubahan ukuran/orientasi (`resize`/`orientationchange`) dan resize ulang canvas (`ui/Viewport.js`)
 - [x] M1.9 Mode `?debug`: pasang `js/debug/bootstrap.js` di `index.html` (sebelumnya belum terpasang, jadi eruda dan panel tidak pernah muncul); eruda diperbesar otomatis di layar besar
+- [x] M1.8a Kamera diuji di papan interaktif Hisense 75WM61FE (Chrome 150): jalan, tampil jernih setelah resolusi dinaikkan
+- [x] M1.11 Zoom digital supaya tangan tampak lebih dekat di layar besar (bawaan 1.3x di layar ≥1200px, 1x di HP; ubah lewat `?zoom=1.5` atau tombol Zoom di panel `?debug`); panel menampilkan resolusi maksimum kamera
 - [x] M1.10 Gambar kamera di papan interaktif buram karena diminta 640×480 lalu diperbesar; resolusi dinaikkan (lihat M1.2)
-- [ ] M1.8 **Tes di perangkat asli**: HP (portrait + landscape) dan TV sekolah; catat apa yang meleset
+- [ ] M1.8 **Tes di perangkat asli**: HP (portrait + landscape) dan TV sekolah; catat apa yang meleset (TV sudah, lihat M1.8a; HP belum dicatat)
 
 **DoD:** kamera tampil mulus, bisa stop/start tanpa reload. (Logika `CameraManager` sudah diuji dengan kamera tiruan; yang tersisa M1.8, uji di perangkat asli.)
 
 ---
 
 ## M2 — Hand Tracking
-- [ ] M2.1 Bundle WASM + `hand_landmarker.task` secara lokal
-- [ ] M2.2 `HandTracker.js`: inisialisasi MediaPipe, mode VIDEO, `numHands: 1` (jumlah tangan jadi parameter agar mudah dinaikkan nanti)
-- [ ] M2.3 Loop deteksi per frame (`requestAnimationFrame`)
-- [ ] M2.4 Output 21 landmark + handedness
-- [ ] M2.5 Overlay canvas: gambar skeleton + titik landmark (bisa on/off)
-- [ ] M2.6 Ukur FPS dan tampilkan di panel debug
+- [ ] M2.1 Bundle WASM + `hand_landmarker.task` secara lokal untuk offline — **belum**; sementara aplikasi otomatis memakai CDN bila `assets/mediapipe/` tidak lengkap (butuh internet). Daftar file dan cara unduh manual ada di README
+- [x] M2.2 `HandTracker.js`: inisialisasi MediaPipe, mode VIDEO, `numHands: 1` (jumlah tangan jadi parameter agar mudah dinaikkan nanti); GPU, jatuh ke CPU bila gagal; pesan jelas bila file MediaPipe tidak ada (belum diuji dengan MediaPipe asli; menunggu uji M2.7)
+- [x] M2.3 Loop deteksi per frame (`requestVideoFrameCallback`, cadangan `requestAnimationFrame`); mulai setelah kamera siap, berhenti saat kamera dilepas; kegagalan tracker tidak menghalangi kamera
+- [x] M2.4 Output 21 landmark + handedness (`toHands`, diuji dengan data tiruan)
+- [x] M2.5 Overlay canvas: gambar skeleton + titik landmark (`ui/SkeletonOverlay.js`; tombol on/off di panel `?debug`)
+- [x] M2.6 Ukur FPS dan tampilkan di panel debug (FPS, ms per deteksi, jumlah tangan, delegate, galat)
 - [ ] M2.7 **Tes di HP asli**, catat FPS; tentukan resolusi/delegate terbaik
 
 **DoD:** skeleton tangan mengikuti gerakan, FPS terukur dan layak (target ≥ 20 FPS).
@@ -51,8 +53,8 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 ---
 
 ## M3 — Cursor & interaksi
-- [ ] M3.1 `LandmarkMapper.js`: normalisasi → koordinat layar (termasuk mirror)
-- [ ] M3.1a Pemetaan memperhitungkan rasio video vs layar (efek `cover`/crop), dihitung ulang saat resize/orientasi
+- [x] M3.1 `LandmarkMapper.js`: normalisasi → koordinat layar (termasuk mirror; dikerjakan lebih awal karena skeleton M2.5 membutuhkannya)
+- [x] M3.1a Pemetaan memperhitungkan rasio video vs layar (efek `cover`/crop), dihitung ulang saat resize/orientasi (diuji hitungannya; akurasi di layar asli lewat M3.1b)
 - [ ] M3.1b Tes akurasi cursor di portrait, landscape, dan layar lebar
 - [ ] M3.2 Ambil landmark 8 sebagai cursor
 - [ ] M3.3 Smoothing posisi cursor (parameter bisa diatur)

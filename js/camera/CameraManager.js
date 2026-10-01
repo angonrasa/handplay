@@ -57,6 +57,14 @@ export class CameraManager {
     return { width: this.video.videoWidth, height: this.video.videoHeight };
   }
 
+  /** Resolusi tertinggi yang sanggup diberikan kamera (bila browser melaporkan). */
+  get maxSize() {
+    const track = this.stream && this.stream.getVideoTracks()[0];
+    const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+    if (!caps || !caps.width || !caps.height) return null;
+    return { width: caps.width.max, height: caps.height.max };
+  }
+
   /** Menyalakan kamera. Aman dipanggil berulang. Resolve dengan ukuran video. */
   start() {
     if (this.stream) return Promise.resolve(this.size);
