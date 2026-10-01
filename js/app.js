@@ -39,7 +39,10 @@ viewport.start();
 
 // ---------- Kamera ----------
 
-const camera = new CameraManager(video);
+// Layar besar (TV/papan interaktif) butuh gambar kamera lebih tajam; 640×480 jadi buram saat diperbesar.
+// Resolusi hanya preferensi: kamera yang tidak sanggup otomatis dapat resolusi terdekat.
+const bigScreen = Math.max(window.innerWidth, window.screen ? window.screen.width : 0) >= 1200;
+const camera = new CameraManager(video, bigScreen ? { width: 1920, height: 1080 } : {});
 let ensureRun = 0; // penanda panggilan terbaru, agar panggilan lama tidak menimpa tampilan
 let hangTimer = 0;
 let lastCameraError = null;

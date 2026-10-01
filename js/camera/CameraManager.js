@@ -39,7 +39,7 @@ export class CameraManager {
    * @param {HTMLVideoElement} video
    * @param {{ facingMode?: 'user'|'environment', width?: number, height?: number }} [options]
    */
-  constructor(video, { facingMode = 'user', width = 640, height = 480 } = {}) {
+  constructor(video, { facingMode = 'user', width = 1280, height = 720 } = {}) {
     this.video = video;
     this.options = { facingMode, width, height };
     this.stream = null;

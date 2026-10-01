@@ -23,13 +23,14 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 
 ## M1 — Kamera
 - [x] M1.1 `CameraManager.js`: minta izin kamera
-- [x] M1.2 Aktifkan kamera depan, atur resolusi (target 640×480; jika perangkat tidak bisa, otomatis coba tanpa syarat)
+- [x] M1.2 Aktifkan kamera depan, atur resolusi (target 1280×720; 1920×1080 di layar ≥1200px supaya tajam di TV; jika perangkat tidak bisa, otomatis dapat resolusi terdekat atau coba tanpa syarat)
 - [x] M1.3 Tampilkan preview video penuh layar + mirror (mirror hanya untuk kamera depan; layar penuh diminta saat menekan "Mulai", bila didukung)
 - [x] M1.4 Tangani error (izin ditolak, kamera tidak ada, dipakai app lain, bukan https/localhost, browser tidak mendukung) dengan pesan jelas + tombol "Coba lagi" yang hanya muncul saat gagal
 - [x] M1.5 Fungsi stop/restart kamera saat pindah layar; kamera juga mati saat tab/aplikasi tidak terlihat dan menyala lagi saat kembali
 - [x] M1.6 Layout fullscreen yang mengikuti orientasi perangkat (tanpa kunci), video mengisi viewport dengan `cover`
 - [x] M1.7 Deteksi perubahan ukuran/orientasi (`resize`/`orientationchange`) dan resize ulang canvas (`ui/Viewport.js`)
 - [x] M1.9 Mode `?debug`: pasang `js/debug/bootstrap.js` di `index.html` (sebelumnya belum terpasang, jadi eruda dan panel tidak pernah muncul); eruda diperbesar otomatis di layar besar
+- [x] M1.10 Gambar kamera di papan interaktif buram karena diminta 640×480 lalu diperbesar; resolusi dinaikkan (lihat M1.2)
 - [ ] M1.8 **Tes di perangkat asli**: HP (portrait + landscape) dan TV sekolah; catat apa yang meleset
 
 **DoD:** kamera tampil mulus, bisa stop/start tanpa reload. (Logika `CameraManager` sudah diuji dengan kamera tiruan; yang tersisa M1.8, uji di perangkat asli.)
