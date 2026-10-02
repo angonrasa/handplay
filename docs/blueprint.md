@@ -1,9 +1,9 @@
 # BLUEPRINT — HandPlay AR (Edisi IPA)
 
 Nama kerja: **HandPlay AR**
-Konsep: game kuis berbasis kamera. Siswa memecahkan bola-bola berisi istilah/angka IPA dengan menyentuhnya menggunakan tangan di depan kamera.
+Konsep: game kuis berbasis kamera. Siswa memecahkan bola-bola berisi istilah/angka IPA dengan mengapitnya di antara dua jari di depan kamera.
 
-> Bukan filter AR. Alurnya: **hand tracking → cursor/gesture → game interaction → umpan balik belajar**.
+> Bukan filter AR. Alurnya: **hand tracking → ujung jari/gesture → game interaction → umpan balik belajar**.
 
 ---
 
@@ -14,7 +14,7 @@ Konsep: game kuis berbasis kamera. Siswa memecahkan bola-bola berisi istilah/ang
 Mekanik viral (pecahkan bola yang melayang) dipakai sebagai **retrieval practice**: siswa harus mengingat jawaban lalu memilihnya secara aktif, bukan sekadar menebak dari daftar.
 
 ```
-Kamera → Deteksi tangan → 21 landmark → Cursor/gesture
+Kamera → Deteksi tangan → 21 landmark → Ujung jari/gesture
       → Game Engine (mode + bank soal) → Bola bereaksi
       → Skor + umpan balik penjelasan → Hasil
 ```
@@ -52,7 +52,7 @@ Kamera → Deteksi tangan → 21 landmark → Cursor/gesture
 HTML + CSS + JavaScript (ES modules, tanpa build step)
 ├── Camera API (getUserMedia)
 ├── MediaPipe Hand Landmarker (lapisan persepsi saja)
-├── Canvas 2D (overlay: bola, cursor, skeleton, efek)
+├── Canvas 2D (overlay: bola, penanda ujung jari, skeleton, efek)
 └── Game Engine sederhana (mode + bank soal)
 ```
 
@@ -61,18 +61,18 @@ Catatan teknis penting:
 - File **WASM dan model MediaPipe di-bundle lokal** supaya bisa jalan offline di kelas dan di Capacitor.
 - Kamera depan **di-mirror** agar gerakan terasa natural.
 - **Orientasi mengikuti perangkat** (tidak dikunci). Target pakai: HP (portrait/landscape) dan TV besar sekolah (landscape). Lihat bagian 4A.
-- **Smoothing** posisi cursor (filter ringan) untuk mengurangi jitter.
+- **Smoothing** posisi ujung jari (filter ringan) untuk mengurangi jitter.
 
 ## 4A. Layout responsif (HP + TV besar)
 
 Orientasi tidak dikunci, jadi semua ukuran dihitung dari **ukuran area tampilan saat itu**, bukan angka tetap.
 
 - **Area game = ukuran viewport.** Video kamera dan canvas overlay dibuat sama ukuran dan ikut berubah saat layar diputar/di-resize.
-- **Koordinat tangan dipetakan ulang** setiap resize atau perubahan orientasi. `LandmarkMapper` harus memperhitungkan rasio video kamera vs rasio layar (video di-crop/`cover`), agar cursor tepat di ujung telunjuk di portrait, landscape, dan layar TV.
-- **Ukuran elemen relatif ke sisi terpendek layar** (bola, cursor, font soal, HUD), bukan piksel tetap. Jadi bola tetap terbaca di HP kecil maupun TV besar.
+- **Koordinat tangan dipetakan ulang** setiap resize atau perubahan orientasi. `LandmarkMapper` harus memperhitungkan rasio video kamera vs rasio layar (video di-crop/`cover`), agar penanda tepat di ujung jari di portrait, landscape, dan layar TV.
+- **Ukuran elemen relatif ke sisi terpendek layar** (bola, penanda jari, font soal, HUD), bukan piksel tetap. Jadi bola tetap terbaca di HP kecil maupun TV besar.
 - **Spawn bola menyesuaikan bentuk layar.** Portrait: bola bergerak dominan vertikal. Landscape: dominan horizontal. Jumlah bola maksimum menyesuaikan luas area.
 - **HUD dan panel penjelasan** berpindah posisi (atas/samping) sesuai orientasi, tidak menutupi area bola.
-- **TV besar:** teks soal dan penjelasan harus terbaca dari jarak jauh (ukuran font minimum lebih besar), dan siswa berdiri lebih jauh dari kamera sehingga tangan tampak lebih kecil. Perlu opsi ukuran cursor dan bola yang bisa diperbesar di Pengaturan.
+- **TV besar:** teks soal dan penjelasan harus terbaca dari jarak jauh (ukuran font minimum lebih besar), dan siswa berdiri lebih jauh dari kamera sehingga tangan tampak lebih kecil. Perlu opsi ukuran penanda jari dan bola yang bisa diperbesar di Pengaturan.
 - Jika area game berubah saat permainan berjalan (HP diputar), **permainan di-pause sebentar**, layout dihitung ulang, lalu dilanjutkan.
 
 ## 5. Arsitektur folder
@@ -94,7 +94,8 @@ handplay-ar/
 │   │   └── CameraManager.js
 │   ├── tracking/
 │   │   ├── HandTracker.js
-│   │   └── LandmarkMapper.js      (mirror + smoothing + ke koordinat layar)
+│   │   ├── LandmarkMapper.js      (mirror + ke koordinat layar + ujung jari + smoothing)
+│   │   └── OneEuroFilter.js       (penghalus adaptif berbasis waktu)
 │   ├── gesture/
 │   │   └── GestureDetector.js
 │   ├── game/
@@ -129,10 +130,10 @@ handplay-ar/
 
 ```
 CameraManager → HandTracker → LandmarkMapper → GestureDetector
-     (video)     (21 landmark)  (x,y layar)      (event: pointing, dst)
+     (video)     (21 landmark)  (x,y layar)      (event: apit, dst)
                                                         │
                                                         ▼
-QuestionBank ──► Mode aktif ◄── GameEngine ◄── cursor + gesture
+QuestionBank ──► Mode aktif ◄── GameEngine ◄── ujung jari + gesture
                      │
                      ▼
         BubbleManager + Collision → hasil hit
@@ -145,13 +146,24 @@ Aturan: HandTracker tidak tahu soal game. Mode tidak tahu soal MediaPipe.
 
 ## 7. Input tangan
 
-MVP: **satu tangan saja** (`numHands: 1`). **Landmark 8 (ujung telunjuk)** = cursor. Bola pecah saat cursor menyentuh bola (collision lingkaran). Jumlah tangan dibuat sebagai parameter di `HandTracker`, jadi dua tangan bisa diaktifkan nanti tanpa mengubah game.
+MVP: **satu tangan saja** (`numHands: 1`). Jumlah tangan tetap parameter di `HandTracker`, jadi dua tangan bisa diaktifkan nanti tanpa mengubah game.
 
-Tahap lanjut:
+**Bola pecah saat diapit dua jari. Dua jari mana pun boleh.** Tidak ada satu cursor. Yang dilacak adalah **lima ujung jari** (landmark 4, 8, 12, 16, 20), sehingga ada 10 pasangan jari yang diperiksa tiap frame.
+
+Satu bola dianggap terapit oleh pasangan ujung jari A dan B jika (koordinat layar, pusat bola C, radius r):
+1. **Bola ada di antara kedua jari:** jarak C ke ruas garis A–B ≤ `r × 0,5`. Ini sekaligus memastikan jari berada di sisi yang berlawanan.
+2. **Jari menutup:** jarak A–B ≤ `r × 1,7`.
+3. **Bertahan** minimal 80 ms (berbasis waktu, bukan jumlah frame, karena FPS di perangkat berbeda-beda).
+
+Angka di atas adalah **nilai awal** yang disetel lewat uji di HP dan papan, disimpan di config, bukan di kode. Tangan terbuka yang menyapu bola tidak memecahkannya karena jarak antar jari terlalu lebar.
+
+`GestureDetector` mengeluarkan event `apit` berisi pasangan jari, titik tengah, dan jarak. `Collision` mencocokkannya dengan bola. Penilaian apit dilakukan di bidang layar (2D, tanpa kedalaman).
+
+Gesture tahap lanjut:
+
 | Gesture | Fungsi |
 |---|---|
-| ☝️ Telunjuk | Cursor / pecahkan bola |
-| 🤏 Pinch | Pegang & pindahkan (mode susun) |
+| 🤏 Apit & tahan | Pegang & pindahkan (mode susun) |
 | ✋ Telapak | Jeda / perisai |
 | ✊ Kepalan | Konfirmasi jawaban |
 | 👋 Swipe | Lewati soal |
@@ -215,8 +227,8 @@ Cakupan awal: **hanya sistem pernapasan** (`pernapasan-8.json`). Bab lain menyus
 ## 9. Layar aplikasi
 
 1. **Home**: Mulai, Pilih Bab, Pilih Mode, Cara Bermain, Pengaturan
-2. **Kalibrasi**: izin kamera, deteksi tangan, tes sentuh
-3. **Game**: HUD (skor, waktu, nyawa), soal di atas, bola melayang, cursor telunjuk
+2. **Kalibrasi**: izin kamera, deteksi tangan, tes apit bola
+3. **Game**: HUD (skor, waktu, nyawa), soal di atas, bola melayang, penanda ujung jari
 4. **Umpan balik**: panel penjelasan singkat saat salah (tidak menutup seluruh layar)
 5. **Hasil**: skor, akurasi, daftar soal yang salah + penjelasan, Main Lagi / Beranda
 6. **Mode Kelas**: input nama siswa/kelompok, giliran, papan skor
@@ -242,14 +254,16 @@ Cakupan awal: **hanya sistem pernapasan** (`pernapasan-8.json`). Bab lain menyus
 | Risiko | Mitigasi |
 |---|---|
 | FPS rendah di HP menengah | Resolusi kamera diturunkan, tes perangkat asli sejak M2, pilih delegate GPU |
-| Cursor jitter | Smoothing di LandmarkMapper, tingkatkan ukuran bola |
+| Jitter ujung jari | Smoothing di LandmarkMapper, tingkatkan ukuran bola, syarat apit diberi toleransi |
+| Apit tidak terdeteksi (FPS rendah, tangan jauh, dua jari saling menutupi) | Syarat apit longgar dan bertahan singkat (ms, bukan jumlah frame), bola besar, uji di HP dan papan sejak M3, parameter di config |
+| Apit tidak sengaja saat tangan bergerak cepat | Wajib bertahan ≥ 80 ms; tangan terbuka yang menyapu tidak memecahkan bola |
 | Bola terlalu cepat untuk siswa | Kecepatan dan jumlah bola bisa diatur di `games.json` |
 | Pencahayaan kelas buruk | Indikator "tangan terdeteksi" di kalibrasi + tips posisi |
 | Soal ambigu/salah konsep | Setiap soal punya `explain`; bank soal divalidasi saat dimuat |
 | Model tidak termuat offline | Bundle lokal, cek saat startup |
-| Cursor meleset saat layar diputar / di TV | Petakan ulang koordinat saat resize/orientasi, hitung dari rasio video vs layar |
+| Penanda jari meleset saat layar diputar / di TV | Petakan ulang koordinat saat resize/orientasi, hitung dari rasio video vs layar |
 | Teks/bola terlalu kecil di TV dari jarak jauh | Ukuran relatif ke sisi terpendek layar + opsi perbesar di Pengaturan |
-| Tangan tampak kecil bagi kamera saat siswa berdiri jauh | Tampilkan petunjuk jarak di Kalibrasi, bola dan cursor bisa diperbesar |
+| Tangan tampak kecil bagi kamera saat siswa berdiri jauh | Tampilkan petunjuk jarak di Kalibrasi, bola dan penanda jari bisa diperbesar |
 
 ---
 
@@ -274,12 +288,22 @@ Empat prinsip dari pemilik proyek: **clean, elegan, unik (tidak pasaran), dan se
 Hindari tampilan "game kuis" yang umum: neon cerah, gradien ungu-biru, font bulat bergaya anak, tombol besar berkilau, maskot.
 
 Arah visual yang diusulkan (**bisa diganti**): **udara dan paru.**
-- **Gelembung kaca** yang tembus pandang, dengan tepi tipis dan sorot cahaya lembut. Inilah satu hal yang diingat pemain.
+- **Gelembung kaca** dengan tepi tipis dan sorot cahaya lembut, cukup pekat agar teks di dalamnya terbaca di atas video. Inilah satu hal yang diingat pemain.
 - Palet bernuansa paru: `Paru #0C2B2E` (dasar), `Kabut #123F43` (permukaan), `Embun #E9F2EE` (teks), `Napas #8EDDCB` (aksen/benar), `Kapiler #F2707B` (salah).
 - Kamera tampil dengan **veil** warna tipis supaya gelembung dan teks tetap terbaca di ruangan terang maupun gelap.
-- Cursor tangan berupa **cincin tipis**, bukan emoji jari.
+- Penanda ujung jari berupa **cincin tipis**, bukan emoji jari.
 - Pecah = cincin yang membesar lalu memudar, sejalan dengan ide "menghembuskan napas".
 - Tombol berbentuk pil, mengulang bentuk bulat gelembung.
+
+**Referensi screenshot (game AR viral).** Diambil hanya hal fungsionalnya, bukan gayanya. Prinsip 13.1 sampai 13.4 tidak berubah, dan identitas "udara dan paru" di atas tetap.
+
+Yang diambil:
+- Kamera penuh layar dan tetap jelas terlihat.
+- Bola berisi teks besar dan tebal, terbaca sekilas.
+- Skeleton tangan terlihat saat bermain (garis tipis + titik), supaya pemain tahu tangannya terlacak. Bisa dimatikan di Pengaturan. Lima ujung jari ditandai cincin tipis yang tetap tampil walau kerangka dimatikan.
+- Tata letak HUD: waktu di kiri atas, nyawa di kanan atas, soal di tengah atas, dalam panel kecil semi-transparan.
+
+Yang tidak ditiru: warna jenuh biru/ungu, kilau tebal, dan tampilan "game kuis" umum. Warna tetap memakai palet di atas.
 
 ### 13.4 Sembunyikan kompleksitas sampai dibutuhkan (progressive disclosure)
 
@@ -297,9 +321,9 @@ Arah visual yang diusulkan (**bisa diganti**): **udara dan paru.**
 
 ### 13.5 Aturan untuk antarmuka berbasis tangan
 - Target (bola, tombol) **besar**, ukuran relatif ke sisi terpendek layar.
-- Tidak mengandalkan hover. Jarak antar target cukup agar cursor tidak meleset ke target tetangga.
+- Tidak mengandalkan hover. Jarak antar target cukup agar apitan tidak mengenai target tetangga.
 - Teks di game terbaca dari jarak jauh (TV): kontras tinggi di atas video kamera.
-- Tidak ada interaksi yang menuntut presisi piksel.
+- Tidak ada interaksi yang menuntut presisi piksel. Gestur apit diberi toleransi besar (lihat bagian 7).
 
 ### 13.6 Uji sebelum sebuah layar dianggap selesai
 1. Apa **satu** hal yang dilakukan pemain di layar ini? Apakah sudah jelas tanpa membaca?

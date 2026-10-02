@@ -15,6 +15,7 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M0.4b `ScreenManager` + alur layar dasar (Home → Kalibrasi → Game → Hasil)
 - [x] M0.6 Tetapkan prinsip desain UI/UX: clean, elegan, unik, sembunyikan kompleksitas (blueprint bagian 13)
 - [x] M0.7 Arah visual "udara & paru" (palet, gelembung kaca) disetujui
+- [x] M0.7a Screenshot referensi game AR viral dipakai sebagai acuan fungsional saja (kamera penuh, teks bola besar, skeleton terlihat, tata letak HUD); prinsip UI/UX dan arah "udara & paru" tetap (blueprint 13.3)
 - [ ] M0.5 Pastikan cara menjalankan lewat server lokal (HTTPS/localhost) di HP
 
 **DoD:** folder proyek jalan, halaman kosong terbuka di browser HP.
@@ -54,17 +55,19 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 
 ---
 
-## M3 — Cursor & interaksi
+## M3 — Ujung jari & gestur apit
 - [x] M3.1 `LandmarkMapper.js`: normalisasi → koordinat layar (termasuk mirror; dikerjakan lebih awal karena skeleton M2.5 membutuhkannya)
 - [x] M3.1a Pemetaan memperhitungkan rasio video vs layar (efek `cover`/crop), dihitung ulang saat resize/orientasi (diuji hitungannya; akurasi di layar asli lewat M3.1b)
-- [ ] M3.1b Tes akurasi cursor di portrait, landscape, dan layar lebar
-- [ ] M3.2 Ambil landmark 8 sebagai cursor
-- [ ] M3.3 Smoothing posisi cursor (parameter bisa diatur)
-- [ ] M3.4 Gambar cursor di canvas
-- [ ] M3.5 `GestureDetector.js` dasar: event `pointing` / `no-hand`
-- [ ] M3.6 Tangani tangan hilang (cursor menghilang halus, bukan lompat)
+- [ ] M3.1b Tes akurasi penanda ujung jari di portrait, landscape, dan layar lebar
+- [x] M3.2 Ambil 5 ujung jari (landmark 4, 8, 12, 16, 20) sebagai titik sentuh: `LandmarkMapper.fingertips(hand)` → `[{id, landmark, x, y}]` koordinat layar; dipasang di `app.js` sebagai `input.fingertips` (diuji dengan data tiruan di Node; belum dicoba di perangkat)
+- [x] M3.3 Smoothing posisi tiap ujung jari: `OneEuroFilter.js` (adaptif, berbasis waktu) dipakai di `LandmarkMapper.fingertips()`; parameter di `DEFAULT_SMOOTHING` / `setSmoothing()`, `?smooth=0` mematikan; filter di-reset saat tangan hilang (nilai awal disetel di M3.5b; diuji data tiruan di Node, belum di perangkat)
+- [x] M3.4 Gambar penanda ujung jari di canvas: `SkeletonOverlay.draw(hands, vp, fingertips)` menggambar 5 cincin tipis setara (radius `2,6u`) memakai posisi yang sudah dihaluskan; tetap tampil walau kerangka dimatikan; sorotan telunjuk lama dihapus (diuji dengan canvas tiruan di Node, belum dilihat di perangkat)
+- [ ] M3.5 `GestureDetector.js` dasar: event `no-hand` dan `apit` (pasangan jari bebas, titik tengah, jarak)
+- [ ] M3.5a Parameter apit di config (`r × 0,5` posisi antar jari, `r × 1,7` jarak tutup, 80 ms bertahan) dan tidak di kode
+- [ ] M3.5b Tes apit di HP dan papan Hisense: catat salah deteksi dan apit yang tidak terbaca, setel ulang parameter
+- [ ] M3.6 Tangani tangan hilang (penanda menghilang halus, bukan lompat)
 
-**DoD:** cursor mengikuti ujung telunjuk dengan stabil di seluruh layar.
+**DoD:** penanda mengikuti kelima ujung jari dengan stabil di seluruh layar, dan apit dua jari mana pun terdeteksi dengan andal.
 
 ---
 
@@ -72,10 +75,10 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [ ] M4.1 `GameState.js` + mesin state (home → kalibrasi → main → hasil)
 - [ ] M4.2 `BubbleManager.js`: spawn bola, gerak, hapus saat keluar layar
 - [ ] M4.3 Bola berisi teks (ukuran font menyesuaikan panjang istilah)
-- [ ] M4.3a Ukuran bola dan cursor relatif ke sisi terpendek layar (bukan piksel tetap)
+- [ ] M4.3a Ukuran bola dan penanda jari relatif ke sisi terpendek layar (bukan piksel tetap)
 - [ ] M4.3b Spawn dan arah gerak bola menyesuaikan orientasi, jumlah bola maksimum menyesuaikan luas area
 - [ ] M4.3c Pause otomatis + hitung ulang layout saat orientasi berubah di tengah permainan
-- [ ] M4.4 `Collision.js`: cursor vs lingkaran
+- [ ] M4.4 `Collision.js`: bola terapit sepasang ujung jari (lihat blueprint 7), bukan sentuhan satu titik
 - [ ] M4.5 `QuestionBank.js`: muat JSON, validasi skema, acak soal
 - [ ] M4.6 `PickCorrectMode.js`: soal aktif, bola benar/pengecoh
 - [ ] M4.7 `ScoreManager.js`: skor, nyawa, akurasi
@@ -88,19 +91,19 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 
 ## M5 — UI, umpan balik, dan layar
 - [ ] M5.1 `ScreenManager.js` + layar Home
-- [ ] M5.2 Layar Kalibrasi (tangan terdeteksi ✓, tes sentuh bola)
-- [ ] M5.3 `HUD.js`: skor, waktu, nyawa, teks soal
+- [ ] M5.2 Layar Kalibrasi (tangan terdeteksi ✓, tes apit bola)
+- [ ] M5.3 `HUD.js`: skor, waktu, nyawa, teks soal; tata letak: waktu kiri atas, nyawa kanan atas, soal tengah atas (panel kecil semi-transparan)
 - [ ] M5.4 `FeedbackPanel.js`: penjelasan singkat saat jawaban salah
 - [ ] M5.5 Layar Hasil: skor, akurasi, daftar soal salah + penjelasan
 - [ ] M5.6 Layar Pilih Bab / Pilih Mode
 - [ ] M5.7 Layar Cara Bermain
-- [ ] M5.8 Pengaturan (skeleton on/off, kecepatan bola, suara)
+- [ ] M5.8 Pengaturan (skeleton on/off; bawaan tampil saat bermain, kecepatan bola, suara)
 - [ ] M5.9 Layout HUD dan panel penjelasan adaptif (atas/samping sesuai orientasi, tidak menutupi bola)
-- [ ] M5.10 Opsi "Ukuran besar" untuk TV: perbesar bola, cursor, dan font (terbaca dari jarak jauh)
+- [ ] M5.10 Opsi "Ukuran besar" untuk TV: perbesar bola, penanda jari, dan font (terbaca dari jarak jauh)
 - [ ] M5.11 Petunjuk jarak berdiri di layar Kalibrasi
 - [ ] M5.12 Pilih dan bundel font ke `assets/fonts/` (offline), tetapkan skala tipografi
 - [ ] M5.13 Terapkan progressive disclosure (blueprint 13.4): kalibrasi hanya bila perlu, cara bermain sekali saja, pengaturan lanjutan di balik satu ikon, panel debug tersembunyi
-- [ ] M5.14 Cursor berupa cincin tipis; efek pecah berupa cincin memudar
+- [ ] M5.14 Penanda ujung jari berupa cincin tipis; efek pecah berupa cincin memudar
 - [ ] M5.15 Tinjau tiap layar dengan uji 13.6 (satu fokus, tidak pasaran, terbaca di HP dan TV)
 
 **DoD:** alur layar lengkap, siswa bisa main tanpa bantuan.
@@ -166,6 +169,7 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - **Orientasi layar: mengikuti perangkat** (tidak dikunci). Target pakai: HP dan TV besar sekolah.
 - **Bank soal awal: sistem pernapasan saja.** Bab lain menyusul setelah MVP berjalan.
 - **MVP: satu tangan saja** (`numHands: 1`). Dua tangan dipertimbangkan setelah MVP stabil.
+- **Cara memecahkan bola: diapit dua jari, pasangan jari bebas** (blueprint 7). Bukan sentuhan satu telunjuk.
 
 ## Keputusan terbuka
 

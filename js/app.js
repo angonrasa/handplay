@@ -1,3 +1,4 @@
+// js/app.js
 // app.js — titik masuk. Merangkai modul; tidak berisi logika game.
 import { ScreenManager } from './ui/ScreenManager.js';
 import { Viewport } from './ui/Viewport.js';
@@ -131,9 +132,14 @@ function releaseCamera() {
 
 const detParam = parseInt(query.get('det'), 10);
 const tracker = new HandTracker({ numHands: 1, ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }) });
-const mapper = new LandmarkMapper();
+// Ujicoba lewat alamat: ?smooth=0 mematikan smoothing ujung jari (untuk membandingkan).
+const mapper = new LandmarkMapper(query.get('smooth') === '0' ? { smoothing: null } : {});
 const skeleton = new SkeletonOverlay(overlay, mapper);
 let trackRun = 0;
+
+// Titik sentuh terbaru (koordinat layar): satu daftar 5 ujung jari per tangan, kosong bila tidak ada tangan.
+// Nanti dibaca GestureDetector (M3.5) dan Collision (M4.4).
+export const input = { fingertips: [] };
 
 function onHands(hands) {
   const vp = layout.viewport;
@@ -147,7 +153,10 @@ function onHands(hands) {
     mirrored: video.classList.contains('is-mirrored'),
     zoom,
   });
-  skeleton.draw(hands, vp);
+  if (!hands.length) mapper.resetSmoothing();
+  const t = performance.now();
+  input.fingertips = hands.map((hand, slot) => mapper.fingertips(hand, slot, t)).filter((tips) => tips.length);
+  skeleton.draw(hands, vp, input.fingertips);
 }
 
 // Kegagalan tracker tidak boleh menghalangi kamera: hanya dicatat (terlihat di panel ?debug).
@@ -167,6 +176,8 @@ async function startTracking() {
 function stopTracking() {
   trackRun += 1;
   tracker.stop();
+  mapper.resetSmoothing();
+  input.fingertips = [];
   skeleton.clear();
 }
 
