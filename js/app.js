@@ -158,7 +158,7 @@ const confParam = parseFloat(query.get('conf'));
 const delegateParam = (query.get('delegate') || '').toUpperCase();
 const tracker = new HandTracker({
   numHands: 1,
-  ...(delegateParam === 'CPU' || delegateParam === 'GPU' ? { delegate: delegateParam } : {}),
+  ...(delegateParam === 'CPU' || delegateParam === 'GPU' ? { delegate: delegateParam, autoDelegate: false } : {}),
   getZoom: () => zoom,
   ...(Number.isNaN(confParam) ? {} : { minConfidence: confParam }),
   ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }),
@@ -179,11 +179,13 @@ export const gestures = new GestureDetector();
 // Ujicoba di perangkat tanpa mengubah berkas: ?center=0.5 (toleransi pusat), ?close=1.7 (jarak tutup), ?hold=80 (ms bertahan).
 async function loadApitSettings() {
   let fromFile = {};
+  let inputFromFile = {};
   try {
     const res = await fetch(new URL('../data/settings.json', import.meta.url));
     if (res.ok) {
       const settings = await res.json();
       fromFile = settings.apit || {};
+      inputFromFile = settings.input || {};
       if (settings.sound === false) sound.setEnabled(false);
     }
   } catch (err) {
@@ -197,6 +199,14 @@ async function loadApitSettings() {
     holdMs: num('hold') ?? fromFile.holdMs,
   });
   console.info('[handplay] parameter apit:', applied);
+  // Cara input: 'tusuk' (sentuh dengan jari mana pun) atau 'apit'. Ujicoba: ?mode=apit, ?touch=1.2 (× radius), ?thold=60 (ms).
+  const inputApplied = gestures.setInput({
+    ...inputFromFile,
+    ...(query.has('mode') ? { mode: query.get('mode') } : {}),
+    ...(query.has('touch') ? { touchRadius: parseFloat(query.get('touch')) } : {}),
+    ...(query.has('thold') ? { touchHoldMs: parseFloat(query.get('thold')) } : {}),
+  });
+  console.info('[handplay] cara input:', inputApplied);
 }
 loadApitSettings();
 

@@ -22,6 +22,37 @@ const CDN_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 const MAX_CONSECUTIVE_ERRORS = 3;
 
+// Pilih delegate otomatis (GPU vs CPU). Di TV/papan lemah, GPU kadang jauh lebih lambat dari CPU (±170 ms per deteksi).
+// Ukur GPU dulu; bila lambat, coba CPU dengan jumlah frame yang sama dan pakai yang lebih cepat. Hasil diingat per perangkat
+// (localStorage), jadi pengukuran hanya sekali. ?retune mengulang pengukuran; ?delegate=cpu|gpu memaksa pilihan.
+const TUNE_SAMPLES = 14;   // frame BERTANGAN yang diukur per delegate (frame tanpa tangan lebih lambat dan tidak sebanding)
+const TUNE_WARMUP = 3;     // frame awal setelah ganti delegate dibuang
+const TUNE_SLOW_MS = 70;   // GPU lebih cepat dari ini = cukup, tidak perlu mencoba CPU
+const TUNE_MARGIN = 0.8;   // CPU dipakai bila ≤ 80% waktu GPU
+const SAVE_KEY = 'handplay.delegate';
+
+function readSavedDelegate() {
+  try {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('retune')) {
+      window.localStorage.removeItem(SAVE_KEY);
+      return null;
+    }
+    const v = window.localStorage.getItem(SAVE_KEY);
+    return v === 'GPU' || v === 'CPU' ? v : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveDelegate(name) {
+  try { window.localStorage.setItem(SAVE_KEY, name); } catch (e) { /* abaikan */ }
+}
+
+const median = (list) => {
+  const s = [...list].sort((a, b) => a - b);
+  return s.length ? s[Math.floor(s.length / 2)] : 0;
+};
+
 /** code: 'missing-assets' (lokal tidak ada dan CDN gagal) | 'init-failed' | 'detect-failed' */
 export class TrackerError extends Error {
   constructor(code, detail) {
@@ -79,17 +110,24 @@ async function pickSource() {
 
 export class HandTracker {
   /**
-   * @param {{ numHands?: number, delegate?: 'GPU'|'CPU', inputHeight?: number, getZoom?: () => number, minConfidence?: number, createCanvas?: () => HTMLCanvasElement }} [options]
+   * @param {{ numHands?: number, delegate?: 'GPU'|'CPU', inputHeight?: number, getZoom?: () => number, minConfidence?: number, autoDelegate?: boolean, createCanvas?: () => HTMLCanvasElement }} [options]
+   *   autoDelegate: pilih GPU/CPU otomatis berdasarkan kecepatan nyata di perangkat (hanya bila delegate = 'GPU').
    *   getZoom: zoom digital yang sedang tampil. Bila > 1, hanya bagian tengah video yang dikirim ke MediaPipe (sama dengan yang terlihat
    *   di layar), jadi tangan tampak lebih besar bagi detektor dan jarak deteksi bertambah. Landmark dikembalikan ke koordinat video penuh.
    *   minConfidence: ambang deteksi/kehadiran/pelacakan tangan (bawaan MediaPipe 0,5; lebih rendah = tangan jauh lebih mudah ditangkap).
    *   inputHeight: tinggi gambar yang diberikan ke MediaPipe (px). Video 1080p diperkecil dulu
    *   karena deteksi di resolusi penuh lambat di perangkat lemah (TV/papan). 0 = pakai ukuran asli.
    */
-  constructor({ numHands = 1, delegate = 'GPU', inputHeight = 360, getZoom = null, minConfidence = 0.4, createCanvas = null } = {}) {
+  constructor({ numHands = 1, delegate = 'GPU', inputHeight = 360, getZoom = null, minConfidence = 0.4, autoDelegate = true, createCanvas = null } = {}) {
     this.numHands = numHands; // MVP: satu tangan; angka ini parameter, bukan hard-code
     this.inputHeight = inputHeight;
     this.getZoom = getZoom;
+    this.autoDelegate = autoDelegate && delegate === 'GPU';
+    this._create = null;   // pembuat HandLandmarker untuk delegate tertentu
+    this._lms = {};        // delegate → instance yang masih hidup
+    this._tune = null;     // keadaan pengukuran delegate (null = tidak/ tidak lagi mengukur)
+    this.tuned = false;
+    this.gpuMs = 0;
     this.minConfidence = minConfidence;
     this._crop = { x0: 0, y0: 0, w: 1, h: 1 }; // bagian video (0..1) yang dikirim ke MediaPipe
     this._createCanvas = createCanvas || (() => document.createElement('canvas'));
@@ -164,11 +202,15 @@ export class HandTracker {
         minTrackingConfidence: this.minConfidence,
       });
 
+    this._create = create;
+    const saved = this.autoDelegate ? readSavedDelegate() : null;
+    this._saved = saved;
+    const wanted = saved || this.delegatePref;
     try {
-      this._landmarker = await create(this.delegatePref);
-      this.delegate = this.delegatePref;
+      this._landmarker = await create(wanted);
+      this.delegate = wanted;
     } catch (e) {
-      if (this.delegatePref === 'CPU') {
+      if (wanted === 'CPU') {
         throw new TrackerError('init-failed', `${e && e.name}: ${e && e.message}`);
       }
       try {
@@ -178,6 +220,7 @@ export class HandTracker {
         throw new TrackerError('init-failed', `${e2 && e2.name}: ${e2 && e2.message}`);
       }
     }
+    this._lms[this.delegate] = this._landmarker;
   }
 
   /** Satu deteksi. timestamp (ms) harus selalu naik. Mengembalikan daftar tangan. */
@@ -198,6 +241,9 @@ export class HandTracker {
     const run = this._run;
     this._running = true;
     let failures = 0;
+    if (this.autoDelegate && !this._saved && !this.tuned && !this._tune && this.delegate === 'GPU') {
+      this._tune = { phase: 'gpu', samples: [], skip: TUNE_WARMUP };
+    }
 
     const schedule = (cb) =>
       video.requestVideoFrameCallback ? video.requestVideoFrameCallback(cb) : requestAnimationFrame(cb);
@@ -211,7 +257,9 @@ export class HandTracker {
         try {
           const hands = this._toVideoSpace(this.detect(this._source(video), ts));
           failures = 0;
-          this._record(performance.now() - t0, hands.length);
+          const ms = performance.now() - t0;
+          this._record(ms, hands.length);
+          if (this._tune) this._tuneStep(ms, hands.length);
           onResult(hands);
         } catch (e) {
           failures += 1;
@@ -274,6 +322,71 @@ export class HandTracker {
     return hands;
   }
 
+  // Pengukuran delegate: GPU dulu; bila lambat, pasang CPU dan ukur lagi; pakai yang lebih cepat.
+  // Dipanggil tiap deteksi; hanya frame yang ADA tangannya dihitung (tanpa tangan, MediaPipe mencari telapak: lebih lambat).
+  _tuneStep(ms, handCount) {
+    const tn = this._tune;
+    if (!tn || tn.phase === 'switching' || handCount === 0) return;
+    if (tn.skip > 0) {
+      tn.skip -= 1;
+      return;
+    }
+    tn.samples.push(ms);
+    if (tn.samples.length < TUNE_SAMPLES) return;
+    const med = median(tn.samples);
+
+    if (tn.phase === 'gpu') {
+      this.gpuMs = med;
+      tn.gpuMs = med;
+      if (med < TUNE_SLOW_MS) {
+        this._finishTune('GPU');
+        return;
+      }
+      tn.phase = 'switching';
+      this._create('CPU').then(
+        (lm) => {
+          if (!this._tune) {
+            this._closeLandmarker(lm);
+            return;
+          }
+          this._lms.CPU = lm;
+          this._landmarker = lm;
+          this.delegate = 'CPU';
+          tn.phase = 'cpu';
+          tn.samples = [];
+          tn.skip = TUNE_WARMUP;
+        },
+        () => this._finishTune('GPU'), // CPU tidak bisa dibuat: tetap GPU
+      );
+      return;
+    }
+
+    if (tn.phase === 'cpu') {
+      if (med <= tn.gpuMs * TUNE_MARGIN) {
+        this._closeLandmarker(this._lms.GPU);
+        delete this._lms.GPU;
+        this._finishTune('CPU');
+      } else {
+        this._landmarker = this._lms.GPU;
+        this.delegate = 'GPU';
+        this._closeLandmarker(this._lms.CPU);
+        delete this._lms.CPU;
+        this._finishTune('GPU');
+      }
+    }
+  }
+
+  _finishTune(choice) {
+    this._tune = null;
+    this.tuned = true;
+    saveDelegate(choice);
+    if (typeof console !== 'undefined') console.info(`[handplay] delegate dipilih: ${choice} (GPU ${Math.round(this.gpuMs)} ms)`);
+  }
+
+  _closeLandmarker(lm) {
+    try { if (lm && lm.close) lm.close(); } catch (e) { /* abaikan */ }
+  }
+
   stop() {
     this._run += 1;
     this._running = false;
@@ -300,6 +413,8 @@ export class HandTracker {
       hands: this.handCount,
       delegate: this.delegate,
       source: this.source,
+      tune: this._tune ? this._tune.phase : this.tuned ? 'selesai' : null,
+      gpuMs: Math.round(this.gpuMs),
       inputSize: this.inputSize,
       error: this.error ? { code: this.error.code, detail: this.error.detail || this.error.message } : null,
     };

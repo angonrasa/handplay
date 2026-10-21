@@ -4,6 +4,11 @@
   "bubbleSpeed": 1.0,
   "sound": true,
   "largeUI": false,
+  "input": {
+    "mode": "tusuk",
+    "touchRadius": 1,
+    "touchHoldMs": 60
+  },
   "apit": {
     "centerTolerance": 0.5,
     "closeRatio": 1.7,

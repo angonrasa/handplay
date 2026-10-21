@@ -53,7 +53,7 @@ export function mountPerfMeter({ getTracker, getViewport, getCameraSize, getZoom
       idle ? 'loop    : (tidak berjalan)' : `loop    : ${stamps.length} fps   terburuk ${Math.round(worstGap)} ms   batas ${maxFps || 'layar'}`,
       `gambar  : ${drawMs.toFixed(1)} ms/frame`,
       hasLongTask ? `blokir  : ${longCount}× tugas >50 ms, terlama ${Math.round(longMax)} ms` : 'blokir  : (tidak didukung)',
-      `deteksi : ${tr.fps} fps   ${tr.detectMs} ms   ${tr.delegate || '-'}/${tr.source || '-'}   input ${tr.inputSize ? `${tr.inputSize.width}×${tr.inputSize.height}` : '-'}`,
+      `deteksi : ${tr.fps} fps   ${tr.detectMs} ms   ${tr.delegate || '-'}/${tr.source || '-'}${tr.tune ? ` (${tr.tune}${tr.gpuMs ? `, GPU ${tr.gpuMs} ms` : ''})` : ''}   input ${tr.inputSize ? `${tr.inputSize.width}×${tr.inputSize.height}` : '-'}`,
       `canvas  : ${vp ? `${Math.round(vp.width * vp.dpr)}×${Math.round(vp.height * vp.dpr)} (dpr ${vp.dpr})` : '-'}   kamera ${cam.width}×${cam.height}   zoom ${getZoom()}`,
     ];
     el.textContent = lines.join('\n');
