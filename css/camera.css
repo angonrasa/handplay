@@ -43,6 +43,10 @@
   transform: scaleX(-1) scale(var(--zoom, 1));
 }
 
+/* Kamera menyala: butiran tertutup video sepenuhnya, jadi tidak perlu ikut dilukis dan di-composite tiap frame */
+body[data-screen="calibration"] .stage::before,
+body[data-screen="game"] .stage::before { display: none; }
+
 /* Veil: menenangkan gambar kamera supaya gelembung dan teks tetap terbaca.
    Atas lebih pekat (HUD), tengah paling jernih (tempat bermain), tepi digelapkan halus (vinyet). */
 .veil {

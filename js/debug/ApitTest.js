@@ -83,14 +83,17 @@ export function mountApitTest({ gestures }) {
 
 /** Pasangan jari yang paling dekat dengan memenuhi syarat apit untuk salah satu lingkaran (null bila tidak ada tangan). */
 export function nearestCandidate(gestures, targets) {
-  const { centerTolerance, closeRatio } = gestures.apit;
+  const { centerTolerance, closeRatio, pinchRatio, thumbOnly } = gestures.apit;
   let best = null;
   for (const target of targets) {
     for (const pair of gestures.pairs) {
+      if (thumbOnly && !pair.thumb) continue;
       const gapR = pair.gap / target.r;
       const centerR = distanceToSegment(target, pair.a, pair.b) / target.r;
-      const score = Math.max(gapR / closeRatio, centerR / centerTolerance); // ≤ 1 berarti memenuhi syarat
-      if (!best || score < best.score) best = { pair: pair.id, gapR, centerR, score };
+      // Sama dengan GestureDetector: menutup = jarak dua jari ÷ ukuran tangan (cadangan: ÷ radius target bila ukuran tangan tidak ada)
+      const gapScore = pair.ratio !== null && pair.ratio !== undefined ? pair.ratio / pinchRatio : gapR / closeRatio;
+      const score = Math.max(gapScore, centerR / centerTolerance); // ≤ 1 berarti memenuhi syarat
+      if (!best || score < best.score) best = { pair: pair.id, gapR, centerR, ratio: pair.ratio, score };
     }
   }
   return best;
@@ -101,9 +104,9 @@ function drawReadout(ctx, vp, u, gestures, targets, stats) {
   const near = nearestCandidate(gestures, targets);
   const f = (n) => n.toFixed(2);
   const lines = [
-    `apit: ${stats.hits}  |  pusat ≤ ${a.centerTolerance}r  tutup ≤ ${a.closeRatio}r  tahan ${a.holdMs} ms`,
+    `apit: ${stats.hits}  |  pusat ≤ ${a.centerTolerance}r  tutup ≤ ${a.pinchRatio}×tangan  tahan ${a.holdMs} ms / ${a.minFrames} deteksi${a.thumbOnly ? '  ibu jari wajib' : ''}`,
     near
-      ? `terdekat ${near.pair}: tutup ${f(near.gapR)}r  pusat ${f(near.centerR)}r  ${near.score <= 1 ? 'MEMENUHI' : 'belum'}`
+      ? `terdekat ${near.pair}: tutup ${near.ratio === null || near.ratio === undefined ? `${f(near.gapR)}r` : `${f(near.ratio)}×tangan`}  pusat ${f(near.centerR)}r  ${near.score <= 1 ? 'MEMENUHI' : 'belum'}`
       : 'tangan tidak terdeteksi',
     stats.last ? `terakhir ${stats.last.pair}: tutup ${f(stats.last.gapR)}r  pusat ${f(stats.last.centerR)}r` : 'terakhir: -',
   ];

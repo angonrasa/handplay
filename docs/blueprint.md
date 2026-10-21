@@ -152,16 +152,16 @@ Aturan: HandTracker tidak tahu soal game. Mode tidak tahu soal MediaPipe.
 
 MVP: **satu tangan saja** (`numHands: 1`). Jumlah tangan tetap parameter di `HandTracker`, jadi dua tangan bisa diaktifkan nanti tanpa mengubah game.
 
-**Bola pecah saat diapit dua jari. Dua jari mana pun boleh.** Tidak ada satu cursor. Yang dilacak adalah **lima ujung jari** (landmark 4, 8, 12, 16, 20), sehingga ada 10 pasangan jari yang diperiksa tiap frame.
+**Bola pecah saat diapit dua jari, salah satunya ibu jari.** Tidak ada satu cursor. Yang dilacak adalah **lima ujung jari** (landmark 4, 8, 12, 16, 20); `GestureDetector` memeriksa pasangan ibu jari + telunjuk/tengah/manis/kelingking (4 pasangan) tiap frame. *(Revisi 2026-10-21: semula 10 pasangan jari bebas; dua jari bersebelahan hampir selalu berdekatan sehingga ikut dianggap apit. Bisa dimatikan lewat `thumbOnly: false` / `?thumb=0`.)*
 
 Satu bola dianggap terapit oleh pasangan ujung jari A dan B jika (koordinat layar, pusat bola C, radius r):
-1. **Bola ada di antara kedua jari:** jarak C ke ruas garis A–B ≤ `r × 0,5`. Ini sekaligus memastikan jari berada di sisi yang berlawanan.
-2. **Jari menutup:** jarak A–B ≤ `r × 1,7`.
-3. **Bertahan** minimal 80 ms (berbasis waktu, bukan jumlah frame, karena FPS di perangkat berbeda-beda).
+1. **Bola ada di antara kedua jari:** jarak C ke ruas garis A–B ≤ `r × 0,7` (`centerTolerance`).
+2. **Jari menutup, dinilai terhadap ukuran tangan:** jarak A–B ≤ `ukuran tangan × 0,4` (`pinchRatio`; ukuran tangan = jarak pergelangan → pangkal jari tengah di layar, dihitung `LandmarkMapper.fingertips()` sebagai `tips.span`). *(Semula `r × 1,7` terhadap radius bola: dengan bola besar, tangan terbuka yang lewat di atas bola pun terhitung "menutup". Cadangan `r × closeRatio` dipakai hanya bila ukuran tangan tidak diketahui.)*
+3. **Bertahan** ≥ 80 ms (`holdMs`, berbasis waktu) **dan** terlihat di ≥ 2 hasil deteksi berurutan (`minFrames`). Syarat kedua perlu karena deteksi di papan TV hanya 5–6 kali per detik: satu hasil deteksi yang meleset tetap berlaku lebih lama dari 80 ms.
 
-Angka di atas adalah **nilai awal** yang disetel lewat uji di HP dan papan, disimpan di `data/settings.json` (kunci `apit`: `centerTolerance`, `closeRatio`, `holdMs`), bukan di kode. Saat uji di perangkat bisa ditimpa lewat alamat `?center=` `?close=` `?hold=`. Tangan terbuka yang menyapu bola tidak memecahkannya karena jarak antar jari terlalu lebar.
+Angka di atas adalah **nilai awal** yang disetel lewat uji di HP dan papan, disimpan di `data/settings.json` (kunci `apit`: `centerTolerance`, `closeRatio`, `holdMs`, `pinchRatio`, `minFrames`, `thumbOnly`), bukan di kode. Saat uji di perangkat bisa ditimpa lewat alamat `?center=` `?pinch=` `?frames=` `?hold=` `?thumb=0` `?close=`. Alat ukur: `?apittest` menampilkan jarak dua jari ÷ ukuran tangan dan apakah syarat terpenuhi.
 
-`GestureDetector` menghitung 10 pasangan jari tiap frame. Diberi daftar target (lingkaran bola) lewat `match(targets, waktu)`, ia memeriksa tiga syarat di atas dan mengeluarkan event `apit` berisi target, pasangan jari, titik tengah, dan jarak. `Collision` (M4.4) cukup menyediakan daftar bola dan memakai hasilnya. Event `hand` / `no-hand` dikeluarkan saat tangan muncul / hilang. Penilaian apit dilakukan di bidang layar (2D, tanpa kedalaman).
+`GestureDetector` diberi daftar target (lingkaran bola) lewat `match(targets, waktu)`, memeriksa syarat di atas dan mengeluarkan event `apit` berisi target, pasangan jari, titik tengah, dan jarak. Kuncinya per bola + tangan (bukan per pasangan jari), jadi berganti pasangan saat masih menempel tidak mengulang hitungan. `Collision` (M4.4) cukup menyediakan daftar bola dan memakai hasilnya. Event `hand` / `no-hand` dikeluarkan saat tangan muncul / hilang. Penilaian apit dilakukan di bidang layar (2D, tanpa kedalaman). Mode `tusuk` (satu ujung jari menyentuh bola) tetap ada di kode sebagai pembanding (`input.mode`, `?mode=tusuk`) tetapi bukan bawaan.
 
 Gesture tahap lanjut:
 

@@ -89,7 +89,7 @@ async function findMissingLocal() {
   return missing;
 }
 
-async function pickSource() {
+export async function pickSource() {
   const missing = await findMissingLocal();
   if (!missing.length) {
     return {

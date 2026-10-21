@@ -5,13 +5,16 @@
   "sound": true,
   "largeUI": false,
   "input": {
-    "mode": "tusuk",
+    "mode": "apit",
     "touchRadius": 1,
     "touchHoldMs": 60
   },
   "apit": {
-    "centerTolerance": 0.5,
+    "centerTolerance": 0.7,
     "closeRatio": 1.7,
-    "holdMs": 80
+    "holdMs": 80,
+    "pinchRatio": 0.4,
+    "minFrames": 2,
+    "thumbOnly": true
   }
 }

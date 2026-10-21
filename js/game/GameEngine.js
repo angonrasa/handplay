@@ -76,6 +76,11 @@ export class GameEngine {
     this.minFrameMs = fps > 0 ? 1000 / fps - 2 : 0; // longgar 2 ms: jam rAF tidak persis rata
   }
 
+  /** Batas bawah HUD/teks soal (px). Mode yang menata gelembung di bawah soal memakainya; mode lain mengabaikan. */
+  setTopInset(px) {
+    if (this.mode && typeof this.mode.setTopInset === 'function') this.mode.setTopInset(px);
+  }
+
   /** Gelembung perlu digambar (bermain atau dijeda). */
   get visible() {
     return !!this.mode && (this.state.phase === Phase.PLAYING || this.state.phase === Phase.PAUSED);

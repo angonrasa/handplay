@@ -94,7 +94,7 @@ export class LandmarkMapper {
    * @param {{ landmarks: {x:number,y:number}[] }} hand  satu elemen keluaran HandTracker
    * @param {number} [slot]  urutan tangan pada frame (0 untuk MVP satu tangan); tiap slot punya filter sendiri
    * @param {number} [time]  waktu frame dalam ms; bawaan performance.now()
-   * @returns {{ id:string, landmark:number, x:number, y:number }[]}
+   * @returns {{ id:string, landmark:number, x:number, y:number }[]}  (array dengan properti tambahan `span`: ukuran tangan di layar, px)
    */
   fingertips(hand, slot = 0, time = now()) {
     const pts = hand && hand.landmarks;
@@ -105,6 +105,11 @@ export class LandmarkMapper {
       if (!p) return [];
       out.push({ id, landmark, x: p.x, y: p.y });
     }
+    // Ukuran tangan di layar (pergelangan → pangkal jari tengah, px): pembanding "jari menutup" untuk apit (GestureDetector).
+    // Dari landmark mentah, bukan yang dihaluskan; tidak bergantung jarak tangan ke kamera.
+    const wrist = this.toScreen(pts[0]);
+    const knuckle = this.toScreen(pts[9]);
+    out.span = wrist && knuckle ? Math.hypot(knuckle.x - wrist.x, knuckle.y - wrist.y) : 0;
     return out;
   }
 }

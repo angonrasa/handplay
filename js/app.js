@@ -4,6 +4,7 @@ import { ScreenManager } from './ui/ScreenManager.js';
 import { Viewport } from './ui/Viewport.js';
 import { CameraManager } from './camera/CameraManager.js';
 import { HandTracker } from './tracking/HandTracker.js';
+import { WorkerHandTracker } from './tracking/WorkerHandTracker.js';
 import { LandmarkMapper } from './tracking/LandmarkMapper.js';
 import { GestureDetector } from './gesture/GestureDetector.js';
 import { SkeletonOverlay } from './ui/SkeletonOverlay.js';
@@ -156,13 +157,17 @@ const detParam = parseInt(query.get('det'), 10);
 const confParam = parseFloat(query.get('conf'));
 // ?delegate=cpu mencoba deteksi di CPU (di TV lemah, GPU kadang justru lebih lambat).
 const delegateParam = (query.get('delegate') || '').toUpperCase();
-const tracker = new HandTracker({
+const trackerOptions = {
   numHands: 1,
   ...(delegateParam === 'CPU' || delegateParam === 'GPU' ? { delegate: delegateParam, autoDelegate: false } : {}),
   getZoom: () => zoom,
   ...(Number.isNaN(confParam) ? {} : { minConfidence: confParam }),
   ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }),
-});
+};
+// ?worker=1: deteksi berjalan di Web Worker supaya thread utama (gelembung, HUD, penanda) tidak ikut terblokir.
+// Gagal dimuat = otomatis jatuh ke HandTracker biasa (lihat startTracking).
+const workerOk = query.get('worker') === '1' && typeof Worker !== 'undefined' && typeof createImageBitmap === 'function';
+let tracker = workerOk ? new WorkerHandTracker(trackerOptions) : new HandTracker(trackerOptions);
 // Ujicoba lewat alamat: ?smooth=0 mematikan smoothing ujung jari (untuk membandingkan).
 const mapper = new LandmarkMapper(query.get('smooth') === '0' ? { smoothing: null } : {});
 const skeleton = new SkeletonOverlay(overlay, mapper);
@@ -176,7 +181,8 @@ export const input = { fingertips: [] };
 export const gestures = new GestureDetector();
 
 // Parameter apit dari data/settings.json (kunci `apit`). Gagal dimuat = pakai nilai cadangan di GestureDetector.
-// Ujicoba di perangkat tanpa mengubah berkas: ?center=0.5 (toleransi pusat), ?close=1.7 (jarak tutup), ?hold=80 (ms bertahan).
+// Ujicoba di perangkat tanpa mengubah berkas: ?center=0.7 (toleransi pusat), ?pinch=0.4 (jarak dua jari ÷ ukuran tangan; makin kecil makin ketat),
+// ?frames=2 (hasil deteksi berurutan), ?hold=80 (ms bertahan), ?thumb=0 (izinkan pasangan jari tanpa ibu jari), ?close=1.7 (cadangan tanpa ukuran tangan).
 async function loadApitSettings() {
   let fromFile = {};
   let inputFromFile = {};
@@ -197,6 +203,9 @@ async function loadApitSettings() {
     centerTolerance: num('center') ?? fromFile.centerTolerance,
     closeRatio: num('close') ?? fromFile.closeRatio,
     holdMs: num('hold') ?? fromFile.holdMs,
+    pinchRatio: num('pinch') ?? fromFile.pinchRatio,
+    minFrames: num('frames') ?? fromFile.minFrames,
+    thumbOnly: query.has('thumb') ? query.get('thumb') !== '0' : fromFile.thumbOnly,
   });
   console.info('[handplay] parameter apit:', applied);
   // Cara input: 'tusuk' (sentuh dengan jari mana pun) atau 'apit'. Ujicoba: ?mode=apit, ?touch=1.2 (× radius), ?thold=60 (ms).
@@ -262,8 +271,20 @@ async function startTracking() {
   try {
     await tracker.init();
   } catch (err) {
-    console.error('[handplay] tracker gagal:', err?.code, err?.detail || err?.message);
-    return;
+    if (tracker instanceof WorkerHandTracker) {
+      console.warn('[handplay] worker gagal, memakai deteksi di thread utama:', err?.code, err?.detail || err?.message);
+      tracker.destroy();
+      tracker = new HandTracker(trackerOptions);
+      try {
+        await tracker.init();
+      } catch (err2) {
+        console.error('[handplay] tracker gagal:', err2?.code, err2?.detail || err2?.message);
+        return;
+      }
+    } else {
+      console.error('[handplay] tracker gagal:', err?.code, err?.detail || err?.message);
+      return;
+    }
   }
   if (run !== trackRun || !camera.active) return;
   tracker.start(video, onHands);
@@ -335,7 +356,11 @@ async function loadGameData() {
       QuestionBank.load(dataUrl('../data/banks/pernapasan-8.json').href),
     ]);
     bank = loaded;
-    engine.setConfig(games.modes.find((m) => m.id === 'pick-correct') || games.modes[0]);
+    const config = { ...(games.modes.find((m) => m.id === 'pick-correct') || games.modes[0]) };
+    // Ujicoba posisi pilihan jawaban tanpa mengubah berkas: ?row=0.6 (0 = tepat di bawah soal, 1 = paling bawah).
+    const row = parseFloat(query.get('row'));
+    if (Number.isFinite(row)) config.rowAnchor = row;
+    engine.setConfig(config);
     if (bank.warnings && bank.warnings.length) console.warn('[handplay] peringatan bank soal:', bank.warnings);
   } catch (err) {
     console.error('[handplay] data game gagal dimuat:', err?.message || err);
@@ -350,7 +375,42 @@ const resultScreen = new ResultScreen(document.getElementById('result'));
 // Umpan balik pecah (cincin memudar + kilat tepi saat salah): diberi event engine, digambar sebagai lapisan overlay.
 const effects = new Effects({ flashEl: document.getElementById('flash') });
 function renderHud() {
-  hud.render(engine.snapshot());
+  const snap = engine.snapshot();
+  hud.render(snap);
+  return snap;
+}
+
+// Pilihan jawaban selalu di bawah teks soal, sepanjang apa pun soalnya: ukur tepi bawah HUD yang tampil nyata dan beri tahu mode.
+// Diukur hanya saat soal atau ukuran layar berganti (+3 frame sesudahnya, menunggu tata letak HUD mapan), karena membaca
+// ukuran DOM memaksa hitung ulang tata letak dan berat di papan TV.
+const hudRoot = document.getElementById('hud');
+const fit = { key: '', pending: 0 };
+function hudBottom(vp) {
+  const stageTop = stage.getBoundingClientRect().top;
+  let bottom = 0;
+  for (const el of hudRoot.querySelectorAll('*')) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    if (r.height > vp.height * 0.4) continue;       // pembungkus besar, bukan panel
+    if (r.top - stageTop > vp.height * 0.45) continue; // elemen HUD yang bukan di bagian atas
+    bottom = Math.max(bottom, r.bottom - stageTop);
+  }
+  return bottom;
+}
+function fitAnswersBelowPrompt(snap) {
+  const vp = layout.viewport;
+  if (!vp || !snap.prompt) {
+    fit.key = '';
+    return;
+  }
+  const key = `${snap.prompt}|${vp.width}x${vp.height}`;
+  if (key !== fit.key) {
+    fit.key = key;
+    fit.pending = 4;
+  }
+  if (fit.pending <= 0) return;
+  fit.pending -= 1;
+  engine.setTopInset(hudBottom(vp));
 }
 
 engine = new GameEngine({
@@ -370,8 +430,8 @@ engine = new GameEngine({
   // Dipanggil tiap frame: gelembung bergerak halus walau deteksi tangan hanya 5–6 kali per detik.
   onFrame: (t) => {
     const t0 = performance.now();
+    fitAnswersBelowPrompt(renderHud()); // HUD dulu, supaya posisi gelembung sudah benar saat digambar
     skeleton.redraw(layout.viewport, t);
-    renderHud();
     if (perf) perf.frame(t, performance.now() - t0);
   },
 });

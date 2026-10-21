@@ -12,12 +12,16 @@
 //
 // Apit (blueprint 7): satu target (bola; pusat C, radius r) diapit pasangan ujung jari A dan B bila
 //   1. C dekat ruas garis A–B:  jarak(C, AB) ≤ r × centerTolerance   (target ada di antara kedua jari)
-//   2. kedua jari menutup:      jarak(A, B)  ≤ r × closeRatio
-//   3. keduanya bertahan ≥ holdMs (berbasis waktu, karena FPS tiap perangkat berbeda)
-// Pasangan jari bebas (10 pasangan dari 5 ujung jari). Satu target hanya memancarkan 'apit' sekali
+//   2. kedua jari MENUTUP, diukur terhadap ukuran tangan: jarak(A, B) ≤ ukuranTangan × pinchRatio
+//      (ukuran tangan = pergelangan → pangkal jari tengah, dari LandmarkMapper). Tanpa ukuran tangan (data uji): jarak(A, B) ≤ r × closeRatio.
+//      Ukuran gelembung TIDAK dipakai untuk menilai "menutup": gelembung besar membuat tangan terbuka yang sekadar lewat dianggap apit.
+//   3. salah satu jari adalah ibu jari (`thumbOnly`, bawaan nyala): dua jari bersebelahan hampir selalu berdekatan, itu bukan apit
+//   4. bertahan ≥ holdMs DAN terlihat di ≥ minFrames hasil deteksi berurutan. Syarat kedua penting di TV lemah: deteksi hanya 5–6 kali per
+//      detik, jadi satu hasil deteksi yang meleset tetap "berlaku" lebih lama dari holdMs; tanpa minFrames, satu frame meleset saja sudah memecahkan gelembung.
+// Pasangan jari bebas selama memenuhi (3) (4 pasangan: ibu jari + telunjuk/tengah/manis/kelingking). Satu target hanya memancarkan 'apit' sekali
 // sampai apitan dilepas. Angka dibaca dari `data/settings.json` (kunci `apit`) lewat `setApit()`; DEFAULT_APIT hanya cadangan bila berkas gagal dimuat.
 
-export const DEFAULT_APIT = { centerTolerance: 0.5, closeRatio: 1.7, holdMs: 80 };
+export const DEFAULT_APIT = { centerTolerance: 0.7, closeRatio: 1.7, holdMs: 80, pinchRatio: 0.4, minFrames: 2, thumbOnly: true };
 export const DEFAULT_INPUT = { mode: 'tusuk', touchRadius: 1, touchHoldMs: 60 };
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -41,22 +45,25 @@ export class GestureDetector {
     this.pairs = [];     // pasangan ujung jari frame terakhir
     this.hasHand = false;
     this._listeners = { hand: [], 'no-hand': [], apit: [] };
-    this._since = new Map(); // "target|tangan|pasangan" → waktu mulai memenuhi syarat
+    this._since = new Map(); // "target|tangan" → waktu mulai memenuhi syarat
     this._fired = new Set(); // kunci yang sudah memancarkan 'apit' dan belum dilepas
+    this._frames = new Map(); // "target|tangan" → { n: hasil deteksi berurutan yang memenuhi syarat, last: nomor deteksi terakhir yang dihitung }
+    this._frame = 0;         // nomor hasil deteksi (naik tiap update())
   }
 
   /**
    * Ganti parameter apit saat berjalan. Nilai yang bukan angka valid diabaikan (parameter lama tetap).
-   * centerTolerance dan closeRatio harus > 0, holdMs harus ≥ 0.
+   * centerTolerance, closeRatio, pinchRatio harus > 0, holdMs harus ≥ 0, minFrames ≥ 1 (dibulatkan), thumbOnly boolean.
    * @param {Partial<typeof DEFAULT_APIT>|null|undefined} params
    * @returns {typeof DEFAULT_APIT} parameter yang berlaku sekarang
    */
   setApit(params) {
-    const min = { centerTolerance: 1e-6, closeRatio: 1e-6, holdMs: 0 };
+    const min = { centerTolerance: 1e-6, closeRatio: 1e-6, holdMs: 0, pinchRatio: 1e-6, minFrames: 1 };
     for (const key of Object.keys(min)) {
       const v = params && params[key];
-      if (typeof v === 'number' && Number.isFinite(v) && v >= min[key]) this.apit[key] = v;
+      if (typeof v === 'number' && Number.isFinite(v) && v >= min[key]) this.apit[key] = key === 'minFrames' ? Math.round(v) : v;
     }
+    if (params && typeof params.thumbOnly === 'boolean') this.apit.thumbOnly = params.thumbOnly;
     this._reset();
     return { ...this.apit };
   }
@@ -96,18 +103,24 @@ export class GestureDetector {
   update(fingertips, time = now()) {
     const hands = fingertips || [];
     const pairs = [];
+    this._frame += 1;
     hands.forEach((tips, hand) => {
+      const span = Number.isFinite(tips.span) && tips.span > 0 ? tips.span : 0; // ukuran tangan di layar (px); 0 = tidak diketahui
       for (let i = 0; i < tips.length; i += 1) {
         for (let j = i + 1; j < tips.length; j += 1) {
           const a = tips[i];
           const b = tips[j];
+          const gap = Math.hypot(a.x - b.x, a.y - b.y);
           pairs.push({
             id: `${a.id}-${b.id}`,
             hand,
             a,
             b,
             mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-            gap: Math.hypot(a.x - b.x, a.y - b.y),
+            gap,
+            span,
+            ratio: span ? gap / span : null, // jarak dua jari ÷ ukuran tangan (≈ 0 = bertemu, ≈ 1 = tangan terbuka lebar)
+            thumb: a.id === 'thumb' || b.id === 'thumb',
           });
         }
       }
@@ -131,24 +144,36 @@ export class GestureDetector {
    */
   match(targets, time = now()) {
     if (this.input.mode === 'tusuk') return this._matchTouch(targets, time);
-    const { centerTolerance, closeRatio, holdMs } = this.apit;
+    const { centerTolerance, closeRatio, holdMs, pinchRatio, minFrames, thumbOnly } = this.apit;
     const seen = new Set();
     const hits = [];
 
     for (const target of targets) {
       let best = null; // bila beberapa pasangan memenuhi syarat, pakai yang paling dekat ke pusat
       for (const pair of this.pairs) {
-        if (pair.gap > target.r * closeRatio) continue;
+        if (thumbOnly && !pair.thumb) continue;
+        if (pair.span) {
+          if (pair.gap > pair.span * pinchRatio) continue; // belum menutup (ukuran tangan sebagai pembanding)
+        } else if (pair.gap > target.r * closeRatio) {
+          continue; // ukuran tangan tidak diketahui: cadangan lama
+        }
         const d = distanceToSegment(target, pair.a, pair.b);
         if (d > target.r * centerTolerance) continue;
         if (!best || d < best.d) best = { pair, d };
       }
       if (!best) continue;
 
-      const key = `${target.id}|${best.pair.hand}|${best.pair.id}`;
+      // Kunci per target + tangan (bukan per pasangan jari): berganti pasangan saat masih menempel tidak mengulang hitungan.
+      const key = `${target.id}|${best.pair.hand}`;
       seen.add(key);
       if (!this._since.has(key)) this._since.set(key, time);
-      if (time - this._since.get(key) < holdMs || this._fired.has(key)) continue;
+      const f = this._frames.get(key) || { n: 0, last: -1 };
+      if (f.last !== this._frame) {
+        f.n += 1; // satu hasil deteksi baru yang masih memenuhi syarat
+        f.last = this._frame;
+      }
+      this._frames.set(key, f);
+      if (time - this._since.get(key) < holdMs || f.n < minFrames || this._fired.has(key)) continue;
 
       this._fired.add(key);
       const hit = { target, pair: best.pair, mid: best.pair.mid, gap: best.pair.gap };
@@ -158,6 +183,7 @@ export class GestureDetector {
 
     // Yang tidak lagi memenuhi syarat dilupakan, jadi apitan berikutnya dihitung dari awal.
     for (const key of [...this._since.keys()]) if (!seen.has(key)) this._since.delete(key);
+    for (const key of [...this._frames.keys()]) if (!seen.has(key)) this._frames.delete(key);
     for (const key of [...this._fired]) if (!seen.has(key)) this._fired.delete(key);
     return hits;
   }
@@ -193,5 +219,6 @@ export class GestureDetector {
   _reset() {
     this._since.clear();
     this._fired.clear();
+    this._frames.clear();
   }
 }

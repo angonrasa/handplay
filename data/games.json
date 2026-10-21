@@ -8,7 +8,11 @@
       "bubbleCount": 4,
       "questionTime": 10,
       "wobble": 1.0,
-      "scoring": { "correct": 10, "wrong": -5 }
+      "scoring": {
+        "correct": 10,
+        "wrong": -5
+      },
+      "rowAnchor": 0.6
     }
   ]
 }
