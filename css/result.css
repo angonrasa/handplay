@@ -1,0 +1,169 @@
+/* ==========================================================================
+   result.css — layar Hasil (M5.5). Satu fokus: skor. Akurasi melingkari skor; rinciannya di bawah;
+   soal yang keliru disembunyikan di balik satu tombol sampai dibutuhkan (blueprint 13.4).
+   Kamera mati di layar ini, jadi latarnya statis dan tidak butuh blur.
+   ========================================================================== */
+
+.screen--result .result {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  /* isi yang tergulir memudar sebelum bilah tombol, bukan terpotong tajam */
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--s3)), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - var(--s3)), transparent);
+}
+.screen--result .result::-webkit-scrollbar { display: none; }
+
+/* margin auto: tengah bila muat, bisa digulir dari atas bila tidak muat */
+.result__content {
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  margin-block: auto;
+}
+
+.result__hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+
+/* Cincin akurasi + skor di tengahnya */
+.result__meter {
+  position: relative;
+  flex: none;
+  width: calc(var(--u) * 38);
+  aspect-ratio: 1;
+}
+.result__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.result__track,
+.result__arc { fill: none; }
+.result__track { stroke: var(--garis-halus); stroke-width: 4; }
+.result__arc {
+  stroke: var(--napas);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1000ms var(--ease) 180ms;
+}
+.result__score {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+.result__num {
+  font-size: calc(var(--u) * 13);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.result__unit {
+  margin-top: calc(var(--u) * 1.4);
+  font-size: var(--fs-small);
+  color: var(--embun-sayup);
+}
+
+.result__headline .heading { margin-bottom: var(--s1); }
+
+/* Rincian: benar, salah, terlewat */
+.result__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  max-width: calc(var(--u) * 80);
+  margin: 0;
+  padding: calc(var(--u) * 2.6) 0;
+  border: 1px solid var(--garis-halus);
+  border-radius: var(--r-panel);
+  background: var(--kaca);
+  box-shadow: var(--sorot), var(--bayang);
+}
+.result__stat {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.9);
+  padding: 0 calc(var(--u) * 3.4);
+}
+.result__stat + .result__stat { border-inline-start: 1px solid var(--garis-halus); }
+.result__stat dt { order: 2; font-size: var(--fs-small); color: var(--embun-sayup); }
+.result__stat dd {
+  order: 1;
+  margin: 0;
+  font-size: clamp(1.6rem, calc(var(--u) * 6), 4.2rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.result__stat--right dd { color: var(--napas); }
+.result__stat--wrong dd { color: var(--kapiler); }
+
+/* Soal yang keliru: tombol kecil, isinya terbuka hanya bila diminta */
+.result__review { width: 100%; max-width: calc(var(--u) * 80); }
+.result__review > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+  min-height: max(46px, calc(var(--u) * 8));
+  padding: 0 calc(var(--u) * 4);
+  border: 1px solid var(--garis);
+  border-radius: 999px;
+  background: var(--kaca-terang);
+  box-shadow: var(--sorot);
+  font-size: calc(var(--fs-button) * 0.92);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.result__review > summary::-webkit-details-marker { display: none; }
+.result__review > summary::after {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.12em) rotate(45deg);
+  transition: transform var(--dur) var(--ease);
+}
+.result__review[open] > summary::after { transform: translateY(0.1em) rotate(-135deg); }
+
+.result__wrong {
+  display: grid;
+  gap: calc(var(--u) * 1.6);
+  margin: calc(var(--u) * 2.4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.result__miss {
+  padding: calc(var(--u) * 2.4) calc(var(--u) * 3);
+  border: 1px solid var(--garis-halus);
+  border-inline-start: 3px solid var(--kapiler); /* tanda "salah" */
+  border-radius: var(--r-kecil);
+  background: var(--kaca);
+}
+.result__miss-q { margin: 0 0 calc(var(--u) * 1.2); font-weight: 600; line-height: 1.3; }
+.result__miss-line { margin: 0; font-size: 0.9em; color: var(--embun-redup); }
+.result__miss-line strong { font-weight: 600; }
+.result__miss-line--picked strong { color: var(--kapiler); }
+.result__miss-line--answer strong { color: var(--napas); }
+.result__miss-why { margin: calc(var(--u) * 1.4) 0 0; font-size: 0.86em; line-height: 1.45; color: var(--embun-sayup); }
+
+@media (orientation: portrait) {
+  .result__hero { flex-direction: column; align-items: flex-start; gap: var(--s3); }
+  .result__meter { width: calc(var(--u) * 58); }
+  .result__num { font-size: calc(var(--u) * 20); }
+}

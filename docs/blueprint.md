@@ -36,6 +36,9 @@ Kamera → Deteksi tangan → 21 landmark → Ujung jari/gesture
 - Soal tampil di atas layar. Beberapa bola melayang, satu atau lebih berisi jawaban benar, sisanya pengecoh.
 - Pecahkan bola benar → skor naik, soal berikutnya.
 - Pecahkan bola salah → nyawa/skor berkurang + penjelasan singkat.
+- Satu apitan = satu jawaban: soal langsung selesai (benar atau salah), gelembung lain dibersihkan, lalu soal berikutnya.
+- Jawaban benar keburu keluar layar → soal dilewati, tanpa mengurangi nyawa dan tanpa menurunkan akurasi.
+- Skor tidak turun di bawah 0. Ronde berakhir bila waktu habis, nyawa habis, atau soal habis.
 
 ### Mode B — Kelompokkan
 - Prompt berupa kategori, misalnya "Pecahkan semua yang termasuk saluran pernapasan".
@@ -111,6 +114,7 @@ handplay-ar/
 │   │   ├── Collision.js
 │   │   └── ScoreManager.js
 │   └── ui/
+│       ├── BubbleRenderer.js      (gambar gelembung kaca + teks; posisi dari BubbleManager)
 │       ├── HUD.js
 │       ├── FeedbackPanel.js       (penjelasan benar/salah)
 │       ├── ScreenManager.js
@@ -155,9 +159,9 @@ Satu bola dianggap terapit oleh pasangan ujung jari A dan B jika (koordinat laya
 2. **Jari menutup:** jarak A–B ≤ `r × 1,7`.
 3. **Bertahan** minimal 80 ms (berbasis waktu, bukan jumlah frame, karena FPS di perangkat berbeda-beda).
 
-Angka di atas adalah **nilai awal** yang disetel lewat uji di HP dan papan, disimpan di config, bukan di kode. Tangan terbuka yang menyapu bola tidak memecahkannya karena jarak antar jari terlalu lebar.
+Angka di atas adalah **nilai awal** yang disetel lewat uji di HP dan papan, disimpan di `data/settings.json` (kunci `apit`: `centerTolerance`, `closeRatio`, `holdMs`), bukan di kode. Saat uji di perangkat bisa ditimpa lewat alamat `?center=` `?close=` `?hold=`. Tangan terbuka yang menyapu bola tidak memecahkannya karena jarak antar jari terlalu lebar.
 
-`GestureDetector` mengeluarkan event `apit` berisi pasangan jari, titik tengah, dan jarak. `Collision` mencocokkannya dengan bola. Penilaian apit dilakukan di bidang layar (2D, tanpa kedalaman).
+`GestureDetector` menghitung 10 pasangan jari tiap frame. Diberi daftar target (lingkaran bola) lewat `match(targets, waktu)`, ia memeriksa tiga syarat di atas dan mengeluarkan event `apit` berisi target, pasangan jari, titik tengah, dan jarak. `Collision` (M4.4) cukup menyediakan daftar bola dan memakai hasilnya. Event `hand` / `no-hand` dikeluarkan saat tangan muncul / hilang. Penilaian apit dilakukan di bidang layar (2D, tanpa kedalaman).
 
 Gesture tahap lanjut:
 
@@ -205,6 +209,13 @@ Cakupan awal: **hanya sistem pernapasan** (`pernapasan-8.json`). Bab lain menyus
   ]
 }
 ```
+
+**Aturan validasi** (`QuestionBank`, dijalankan saat bank dimuat):
+- Bank: `bankId` dan `title` terisi, `items` berupa daftar yang tidak kosong.
+- Semua soal: `id` unik, `type` salah satu `pick-correct` / `group` / `sequence`, `prompt` dan `explain` terisi.
+- `pick-correct`: tepat 1 `correct`, minimal 1 `distractors`. `group`: minimal 2 `correct`, minimal 1 `distractors`. `sequence`: minimal 2 langkah.
+- Isian dalam satu daftar tidak boleh duplikat, dan tidak boleh muncul di `correct` sekaligus `distractors` (huruf besar/kecil dan spasi di tepi diabaikan).
+- Soal yang salah dibuang dengan peringatan yang menyebut `id` dan alasannya. Bank tanpa soal valid ditolak. Mode `strict` menolak seluruh bank bila ada satu soal salah.
 
 ### Config mode (`data/games.json`)
 

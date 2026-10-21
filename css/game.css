@@ -1,21 +1,49 @@
 /* ==========================================================================
-   game.css — gelembung, HUD, panel penjelasan.
-   Satu hal yang diingat: gelembung kaca yang "bernapas".
+   game.css — gelembung, HUD, jeda.
+   Satu hal yang diingat: gelembung kaca berasap yang "bernapas".
+   Resep gelembung sama dengan js/ui/BubbleRenderer.js: inti berasap, sorot kiri atas, cahaya tepi, tepi bergradasi.
    ========================================================================== */
 
 .bubble {
   position: relative;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
   background:
+    radial-gradient(circle at 50% 50%, rgba(7, 30, 33, 0.40) 0%, rgba(7, 30, 33, 0.22) 70%, rgba(7, 30, 33, 0.10) 100%),
     radial-gradient(circle at 30% 26%,
-      rgba(233, 242, 238, 0.55) 0%,
-      rgba(142, 221, 203, 0.14) 34%,
-      rgba(142, 221, 203, 0.05) 62%,
-      rgba(233, 242, 238, 0.16) 100%);
-  border: 1px solid rgba(233, 242, 238, 0.34);
+      rgba(233, 242, 238, 0.50) 0%,
+      rgba(142, 221, 203, 0.16) 34%,
+      rgba(142, 221, 203, 0.07) 62%,
+      rgba(233, 242, 238, 0.18) 100%);
   box-shadow:
-    inset 0 0 calc(var(--u) * 4) rgba(233, 242, 238, 0.10),
-    0 0 calc(var(--u) * 8) rgba(142, 221, 203, 0.10);
+    inset 0 0 0 1px rgba(233, 242, 238, 0.36),
+    inset calc(var(--u) * -2.4) calc(var(--u) * -3) calc(var(--u) * 5) rgba(142, 221, 203, 0.18),
+    inset calc(var(--u) * 2) calc(var(--u) * 2.4) calc(var(--u) * 4) rgba(233, 242, 238, 0.10),
+    0 0 0 calc(var(--u) * 2.4) rgba(142, 221, 203, 0.05),   /* cincin halus: gema "pecah = cincin" */
+    0 0 0 calc(var(--u) * 5.2) rgba(142, 221, 203, 0.03),
+    0 calc(var(--u) * 5) calc(var(--u) * 9) calc(var(--u) * -3) rgba(3, 16, 18, 0.5);
+}
+
+/* Sorot cahaya di kiri atas */
+.bubble::before {
+  content: "";
+  position: absolute;
+  left: 15%;
+  top: 11%;
+  width: 36%;
+  height: 21%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 42% 42%, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0) 70%);
+  transform: rotate(-33deg);
+  pointer-events: none;
+}
+.bubble__label {
+  font-size: calc(var(--u) * 7.2);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--embun);
+  text-shadow: 0 1px calc(var(--u) * 1.6) rgba(7, 30, 33, 0.55);
 }
 
 /* Gelembung besar di Home: satu-satunya gerak yang berjalan sendiri */
@@ -23,7 +51,7 @@
   flex: none;
   width: calc(var(--u) * 52);
   height: calc(var(--u) * 52);
-  margin-inline-start: auto;
+  margin-inline: auto calc(var(--u) * 5); /* ruang untuk cincin halus di sekeliling */
   animation: napas 7s var(--ease) infinite;
 }
 
@@ -39,7 +67,161 @@
     margin-inline: auto;
     margin-block-start: calc(var(--u) * 6);
   }
+  .bubble__label { font-size: calc(var(--u) * 10.5); }
 }
 
-/* Slot HUD: diisi oleh HUD.js nanti (M5.3) */
-.hud { min-height: 0; }
+/* ---------- HUD (M5.3) ---------- */
+/* Hanya membaca state; tidak menangkap sentuhan/apit. Tata letak: waktu + skor kiri, soal tengah, nyawa kanan. */
+
+.hud { min-height: 0; pointer-events: none; }
+
+.hud__bar {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 2.2fr) 1fr;
+  grid-template-areas: "left prompt lives";
+  align-items: start;
+  gap: var(--s2);
+}
+
+/* Permukaan HUD: kaca berasap, tanpa blur */
+.hud__left,
+.hud__lives,
+.hud__prompt {
+  border: 1px solid var(--garis-halus);
+  background: var(--kaca);
+  box-shadow: var(--sorot), var(--bayang);
+}
+
+.hud__left {
+  grid-area: left;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 3.4);
+  padding: calc(var(--u) * 1.7) calc(var(--u) * 3.4);
+  border-radius: calc(var(--u) * 3.6);
+}
+.hud__stat { display: flex; flex-direction: column; line-height: 1; }
+/* Garis pemisah hanya bila waktu tampil (ronde tanpa batas waktu menyembunyikannya) */
+.hud__stat:not([hidden]) + .hud__stat {
+  padding-inline-start: calc(var(--u) * 3.4);
+  border-inline-start: 1px solid var(--garis-halus);
+}
+
+.hud__value {
+  font-size: clamp(1.8rem, calc(var(--u) * 6.6), 4.8rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  transform-origin: left center;
+}
+.hud__value.is-tick { animation: ketuk 380ms var(--ease); } /* skor berubah: respons atas apitan */
+@keyframes ketuk {
+  35% { transform: scale(1.16); color: var(--napas); }
+}
+.hud__label {
+  margin-top: var(--s1);
+  font-size: clamp(0.75rem, calc(var(--u) * 2), 1.4rem);
+  color: var(--embun-sayup);
+}
+.hud__stat[data-low="true"] .hud__value { color: var(--kapiler); } /* sisa waktu menipis */
+
+.hud__prompt {
+  grid-area: prompt;
+  position: relative;
+  justify-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  padding: calc(var(--u) * 2.4) calc(var(--u) * 3.8) calc(var(--u) * 2.4 + 4px);
+  border-radius: var(--r-panel);
+  font-size: clamp(1.1rem, calc(var(--u) * 3.6), 2.6rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: center;
+  transition: opacity var(--dur) var(--ease);
+}
+.hud__prompt[data-visible="false"] { opacity: 0; } /* jeda antar soal: memudar, ruangnya tetap */
+.hud__prompt-text { display: block; }
+
+/* Sisa waktu soal: garis tipis di dasar panel soal. --q (0..1) diisi HUD.js. */
+.hud__timebar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: max(3px, calc(var(--u) * 0.6));
+  background: rgba(233, 242, 238, 0.08);
+}
+.hud__timebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--napas);
+  transform-origin: left center;
+  transform: scaleX(var(--q, 1));
+  transition: transform 140ms linear, background-color var(--dur) var(--ease);
+}
+.hud__prompt[data-low="true"] .hud__timebar::after { background: var(--kapiler); }
+
+.hud__lives {
+  grid-area: lives;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.8);
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  border-radius: 999px;
+}
+/* Nyawa = gelembung mini: utuh = sisa, kosong = hilang */
+.hud__life {
+  width: calc(var(--u) * 3.8);
+  height: calc(var(--u) * 3.8);
+  min-width: 16px;
+  min-height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.9) 0%, rgba(233, 242, 238, 0.55) 26%, rgba(142, 221, 203, 0.4) 72%, rgba(142, 221, 203, 0.28) 100%);
+  box-shadow: inset 0 0 0 1px rgba(233, 242, 238, 0.7), 0 0 calc(var(--u) * 2) rgba(142, 221, 203, 0.3);
+  transition: transform 360ms var(--ease), background 240ms var(--ease), box-shadow 240ms var(--ease);
+}
+.hud__life--lost {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--garis);
+  transform: scale(0.72);
+}
+
+/* Portrait: soal turun ke baris kedua, selebar layar. HUD dipadatkan supaya soal tiga baris tidak menutupi gelembung teratas
+   (tata letak adaptif penuh menyusul di M5.9: area gelembung dan tinggi HUD saling tahu). */
+@media (orientation: portrait) {
+  .hud__bar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "left lives"
+      "prompt prompt";
+  }
+  .hud__left { gap: calc(var(--u) * 3); padding: calc(var(--u) * 1.3) calc(var(--u) * 3); }
+  .hud__stat:not([hidden]) + .hud__stat { padding-inline-start: calc(var(--u) * 3); }
+  .hud__value { font-size: clamp(1.5rem, calc(var(--u) * 6), 3rem); }
+  .hud__label { margin-top: 2px; }
+  .hud__prompt {
+    padding: calc(var(--u) * 1.8) calc(var(--u) * 3.2) calc(var(--u) * 1.8 + 4px);
+    font-size: clamp(1rem, calc(var(--u) * 3.3), 2.2rem);
+  }
+  .hud__lives { padding: calc(var(--u) * 1.5) calc(var(--u) * 2.6); }
+}
+
+/* ---------- Jeda ---------- */
+/* Muncul saat layar diputar atau tab disembunyikan; tombol Lanjut ada di dalamnya (target besar). */
+
+.pause {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s2);
+  padding: var(--s3);
+  text-align: center;
+  background: radial-gradient(90% 80% at 50% 50%, rgba(7, 30, 33, 0.72) 0%, rgba(7, 30, 33, 0.86) 100%);
+}
+.pause .heading { margin: 0; }
+.pause .hint { margin-bottom: var(--s2); }

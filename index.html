@@ -1,23 +1,28 @@
 <!doctype html>
+<!-- index.html -->
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0C2B2E">
+  <meta name="color-scheme" content="dark">
   <title>HandPlay AR</title>
   <!-- Klasik (bukan module), dimuat paling awal: penangkap galat + eruda untuk ?debug -->
   <script src="js/debug/bootstrap.js"></script>
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/camera.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/result.css">
 </head>
 <body>
 
-  <!-- Lapisan belakang: kamera + overlay canvas. Selalu ada, tampil sesuai kebutuhan. -->
+  <!-- Lapisan belakang: kamera, veil (menenangkan video), lalu overlay canvas di atasnya supaya gelembung, teks, dan penanda jari
+       tidak ikut digelapkan veil. Selalu ada, tampil sesuai kebutuhan. -->
   <div class="stage" id="stage">
     <video id="camera" class="camera" playsinline muted hidden></video>
-    <canvas id="overlay" class="overlay" hidden></canvas>
     <div class="veil" aria-hidden="true"></div>
+    <canvas id="overlay" class="overlay" hidden></canvas>
+    <div class="flash" id="flash" aria-hidden="true"></div>
   </div>
 
   <!-- Lapisan depan: satu layar aktif pada satu waktu. -->
@@ -29,7 +34,7 @@
         <p class="lede">Pecahkan gelembung yang berisi jawaban benar, hanya dengan tanganmu.</p>
         <button class="btn btn--primary" data-goto="calibration" data-fullscreen>Mulai</button>
       </div>
-      <div class="bubble bubble--hero" aria-hidden="true"></div>
+      <div class="bubble bubble--hero" aria-hidden="true"><span class="bubble__label">Alveolus</span></div>
     </section>
 
     <section class="screen screen--calibration" data-screen="calibration" hidden>
@@ -49,12 +54,44 @@
       <div class="actions actions--end">
         <button class="btn btn--quiet" data-goto="result">Selesai</button>
       </div>
+      <div class="pause" id="pause" hidden>
+        <h2 class="heading">Permainan dijeda</h2>
+        <p class="hint">Tekan Lanjut saat kamu siap.</p>
+        <button class="btn btn--primary" id="resume" data-resume>Lanjut</button>
+      </div>
     </section>
 
     <section class="screen screen--result" data-screen="result" hidden>
-      <div class="screen__body">
-        <h2 class="heading">Selesai</h2>
-        <p class="hint">Ringkasan skor dan penjelasan menyusul.</p>
+      <div class="result" id="result">
+        <div class="result__content">
+          <div class="result__hero">
+            <div class="result__meter" role="img" data-result="meter">
+              <svg class="result__ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="result__track" cx="60" cy="60" r="54" pathLength="100"></circle>
+                <circle class="result__arc" cx="60" cy="60" r="54" pathLength="100" data-result="arc"></circle>
+              </svg>
+              <div class="result__score">
+                <span class="result__num" data-result="score">0</span>
+                <span class="result__unit">skor</span>
+              </div>
+            </div>
+            <div class="result__headline">
+              <h2 class="heading" data-result="title">Selesai</h2>
+              <p class="hint" data-result="note"></p>
+            </div>
+          </div>
+
+          <dl class="result__stats">
+            <div class="result__stat result__stat--right"><dt>benar</dt><dd data-result="correct">0</dd></div>
+            <div class="result__stat result__stat--wrong"><dt>salah</dt><dd data-result="wrong">0</dd></div>
+            <div class="result__stat"><dt>terlewat</dt><dd data-result="skipped">0</dd></div>
+          </dl>
+
+          <details class="result__review" data-result="review" hidden>
+            <summary data-result="review-title">Pelajari soal yang keliru</summary>
+            <ul class="result__wrong" data-result="wrong-list"></ul>
+          </details>
+        </div>
       </div>
       <div class="actions">
         <button class="btn btn--quiet" data-goto="home">Beranda</button>

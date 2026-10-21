@@ -62,28 +62,31 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [x] M3.2 Ambil 5 ujung jari (landmark 4, 8, 12, 16, 20) sebagai titik sentuh: `LandmarkMapper.fingertips(hand)` → `[{id, landmark, x, y}]` koordinat layar; dipasang di `app.js` sebagai `input.fingertips` (diuji dengan data tiruan di Node; belum dicoba di perangkat)
 - [x] M3.3 Smoothing posisi tiap ujung jari: `OneEuroFilter.js` (adaptif, berbasis waktu) dipakai di `LandmarkMapper.fingertips()`; parameter di `DEFAULT_SMOOTHING` / `setSmoothing()`, `?smooth=0` mematikan; filter di-reset saat tangan hilang (nilai awal disetel di M3.5b; diuji data tiruan di Node, belum di perangkat)
 - [x] M3.4 Gambar penanda ujung jari di canvas: `SkeletonOverlay.draw(hands, vp, fingertips)` menggambar 5 cincin tipis setara (radius `2,6u`) memakai posisi yang sudah dihaluskan; tetap tampil walau kerangka dimatikan; sorotan telunjuk lama dihapus (diuji dengan canvas tiruan di Node, belum dilihat di perangkat)
-- [ ] M3.5 `GestureDetector.js` dasar: event `no-hand` dan `apit` (pasangan jari bebas, titik tengah, jarak)
-- [ ] M3.5a Parameter apit di config (`r × 0,5` posisi antar jari, `r × 1,7` jarak tutup, 80 ms bertahan) dan tidak di kode
+- [x] M3.5 `GestureDetector.js` dasar: `update(fingertips, t)` (10 pasangan jari, event `hand` / `no-hand`) dan `match(targets, t)` (event `apit`: target, pasangan jari bebas, titik tengah, jarak; tiga syarat + tahan 80 ms; sekali per apitan); dipasang di `app.js` sebagai `gestures` (diuji data tiruan di Node, belum di perangkat)
+- [x] M3.5a Parameter apit di config (`data/settings.json` kunci `apit`, dimuat `app.js` → `gestures.setApit()`; timpa lewat `?center=` `?close=` `?hold=`; nilai cadangan tetap di GestureDetector). Nilai awal: `centerTolerance` 0,5 (× radius), `closeRatio` 1,7 (× radius), `holdMs` 80
 - [ ] M3.5b Tes apit di HP dan papan Hisense: catat salah deteksi dan apit yang tidak terbaca, setel ulang parameter
-- [ ] M3.6 Tangani tangan hilang (penanda menghilang halus, bukan lompat)
+  - Alat uji siap: `?apittest` (`js/debug/ApitTest.js`): 6 lingkaran diam yang pecah bila diapit, plus teks seberapa dekat pasangan jari terbaik dengan syarat apit. **Menunggu hasil uji di A15 dan Hisense.**
+- [x] M3.6 Tangani tangan hilang: `SkeletonOverlay` menahan gambar terakhir 200 ms lalu memudar 250 ms (requestAnimationFrame sendiri, jadi halus walau deteksi 5–6 FPS); satu frame deteksi yang terlewat tidak membuat berkedip; filter smoothing tidak lagi di-reset tiap frame kosong (cukup `maxGapMs` 300 ms); lapisan tambahan lewat `addLayer()` (dipakai `?apittest`); `reset()` saat tracking berhenti (diuji canvas tiruan di Node, belum dilihat di perangkat)
 
 **DoD:** penanda mengikuti kelima ujung jari dengan stabil di seluruh layar, dan apit dua jari mana pun terdeteksi dengan andal.
 
 ---
 
 ## M4 — Game Engine inti (Mode A: Pecahkan yang Benar)
-- [ ] M4.1 `GameState.js` + mesin state (home → kalibrasi → main → hasil)
-- [ ] M4.2 `BubbleManager.js`: spawn bola, gerak, hapus saat keluar layar
-- [ ] M4.3 Bola berisi teks (ukuran font menyesuaikan panjang istilah)
-- [ ] M4.3a Ukuran bola dan penanda jari relatif ke sisi terpendek layar (bukan piksel tetap)
-- [ ] M4.3b Spawn dan arah gerak bola menyesuaikan orientasi, jumlah bola maksimum menyesuaikan luas area
+- [x] M4.1 `GameState.js` + mesin state: tabel `TRANSITIONS` (home → calibration → playing ↔ paused → result; kamera putus: playing/paused → calibration), `go()` menolak perpindahan tidak sah dengan galat, `onPhase()`, `reset(config)` divalidasi, `accuracy`; `app.js`: layar ↔ fase saling mengikuti (`state` diekspor; layar `game` = fase playing/paused). Belum dipakai GameEngine (M4.8) (diuji di Node, belum dicoba di perangkat)
+- [x] M4.2 `BubbleManager.js`: `setArea(viewport)`, `spawn({text,kind})` (null bila penuh/tak ada tempat; jalur acak tanpa tumpang tindih), `update(dt detik)` → `{exited}` (dt dipotong 0,1 s), `remove(id)`, `clear()`, `capacity`; kecepatan dasar 12u/detik × `bubbleSpeed`; semua angka di `BUBBLE` (diuji di Node termasuk simulasi 10 menit tanpa tumpang tindih, belum di perangkat)
+- [x] M4.3 Bola berisi teks: `fitText()` memecah teks jadi 1–3 baris dan memilih font terbesar yang muat (satuan radius, jadi tidak berubah saat layar berubah ukuran); `ui/BubbleRenderer.js` menggambar gelembung kaca + teks dan mengecilkan font bila hasil ukur nyata melebihi lingkaran; semua gelembung tampil sama (benar/pengecoh tak terlihat) (diuji dengan kanvas tiruan di Node, belum dilihat di perangkat)
+- [x] M4.3a Ukuran bola dan penanda jari relatif ke sisi terpendek layar (bukan piksel tetap): bola 9u (±10%), penanda jari 2,6u; `sizeScale` disiapkan untuk opsi "Ukuran besar" (M5.10)
+- [x] M4.3b Spawn dan arah gerak bola menyesuaikan orientasi (portrait: masuk dari bawah dan naik; landscape: masuk dari kanan dan ke kiri), jumlah bola maksimum menyesuaikan luas area (`capacity`: gelembung memenuhi ≤ 10% luas, 2–10 buah)
 - [ ] M4.3c Pause otomatis + hitung ulang layout saat orientasi berubah di tengah permainan
-- [ ] M4.4 `Collision.js`: bola terapit sepasang ujung jari (lihat blueprint 7), bukan sentuhan satu titik
-- [ ] M4.5 `QuestionBank.js`: muat JSON, validasi skema, acak soal
-- [ ] M4.6 `PickCorrectMode.js`: soal aktif, bola benar/pengecoh
-- [ ] M4.7 `ScoreManager.js`: skor, nyawa, akurasi
-- [ ] M4.8 Timer + kondisi selesai (waktu habis / nyawa habis / soal habis)
-- [ ] M4.9 Bank soal awal `pernapasan-8.json` (minimal 15 soal, tiap soal ada `explain`)
+  - Sisi BubbleManager sudah ada: `setArea()` menskalakan posisi bila orientasi sama, dan menata ulang gelembung merata di arah gerak baru bila orientasi berganti (diuji di Node). **Menunggu GameEngine (M4.8)** untuk menjeda otomatis (`playing` → `paused`) lalu melanjutkan.
+- [x] M4.4 `Collision.js`: `toTargets(bubbles)` → `{id,x,y,r}` untuk `gestures.match()`, `resolveHits()` memetakan hasil `apit` kembali ke gelembung (hasil ganda/usang dibuang), `findPinched(gestures, bubbles, t)` = keduanya sekali jalan; plus `circlesOverlap`. Logika apit tetap di `GestureDetector` (diuji dengan GestureDetector asli di Node, belum di perangkat)
+- [ ] M4.4a Tes gelembung di HP dan papan Hisense: alamat `?bubbletest` (`js/debug/BubbleTest.js`; `?bspeed=1.5` mengubah kecepatan). Masuk ke layar game: gelembung berisi istilah pernapasan bergerak dan pecah bila diapit; teks bawah menampilkan jumlah, pecah, lolos, arah, dan radius. Catat: apakah ukuran bola enak di HP dan TV, kecepatan, teks terbaca/terpotong, dan apit pada bola yang bergerak. **Menunggu hasil uji.** Loop alat uji memakai `SkeletonOverlay.redraw()` supaya gerak tetap halus walau deteksi 5–6 FPS
+- [x] M4.5 `QuestionBank.js`: `QuestionBank.load(url)` / `.from(data)` / `.validate(data)`, `draw({type,count,rng})` acak tanpa pengulangan, `byType`, `getById`; validasi sesuai blueprint 8 (soal salah dibuang + `warnings`, `strict` menolak seluruh bank); belum dipakai mode (M4.6) (diuji di Node dengan `pernapasan-8.json` asli)
+- [x] M4.6 `PickCorrectMode.js`: satu soal aktif; gelembung benar + (`bubbleCount` − 1) pengecoh masuk satu per satu dalam urutan acak (jeda 0,9 s); apit satu gelembung langsung menyelesaikan soal → event `correct` / `wrong` (membawa jawaban + penjelasan); jawaban benar keburu keluar layar → event `missed`; jeda 0,8 s lalu soal berikutnya; soal habis → `isFinished()`. Mode hanya mengembalikan event, tidak tahu skor/waktu/MediaPipe. Kontrak di `ModeRegistry.js` diperbarui (`update(dt, { pinched })`, `setArea()`, `start({ area })`) (diuji di Node dengan GameState + ScoreManager + BubbleManager asli, belum di perangkat)
+- [x] M4.7 `ScoreManager.js`: `recordHit({correct,item,picked})` menulis ke `GameState` (skor dari `games.json` `scoring`, nyawa −1 saat salah, skor tidak di bawah 0), `recordSkip()` untuk soal terlewat (tidak mengurangi nyawa dan tidak menurunkan akurasi), `outOfLives`, `summary()` untuk layar Hasil (skor, benar, salah, terlewat, akurasi, daftar soal salah + jawaban + penjelasan). `lives: 0` = tanpa nyawa (diuji di Node, belum di perangkat)
+- [x] M4.8 Timer + kondisi selesai (waktu habis / nyawa habis / soal habis)
+- [x] M4.9 Bank soal awal `pernapasan-8.json`: 17 soal `pick-correct` + 1 `group` + 1 `sequence`, semua ada `explain`, lolos validasi `strict`. **Isi soal perlu ditinjau guru IPA sebelum dipakai ke siswa.**
 
 **DoD:** satu sesi penuh bisa dimainkan dari mulai sampai hasil.
 
@@ -92,9 +95,9 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 ## M5 — UI, umpan balik, dan layar
 - [ ] M5.1 `ScreenManager.js` + layar Home
 - [ ] M5.2 Layar Kalibrasi (tangan terdeteksi ✓, tes apit bola)
-- [ ] M5.3 `HUD.js`: skor, waktu, nyawa, teks soal; tata letak: waktu kiri atas, nyawa kanan atas, soal tengah atas (panel kecil semi-transparan)
+- [x] M5.3 `HUD.js`: `new HUD(#hud)`, `render(engine.snapshot())`, `reset()` (ronde baru); waktu + skor kiri atas, soal tengah atas (panel semi-transparan, memudar saat jeda antar soal), nyawa kanan atas berupa cincin (terisi = sisa, kosong = hilang; jumlah awal dipelajari dari render pertama, 0 nyawa = disembunyikan); angka waktu memakai warna "salah" di ≤ 10 detik; portrait: soal turun ke baris kedua; DOM hanya disentuh bila nilai berubah; HUD sementara di `app.js` dihapus (diuji dengan DOM tiruan di Node, belum dilihat di perangkat). **Catatan:** HUD menimpa bagian atas area bola; menyisihkan area bola dari HUD ikut M5.9
 - [ ] M5.4 `FeedbackPanel.js`: penjelasan singkat saat jawaban salah
-- [ ] M5.5 Layar Hasil: skor, akurasi, daftar soal salah + penjelasan
+- [x] M5.5 Layar Hasil: skor, akurasi, daftar soal salah + penjelasan — `js/ui/ResultScreen.js` + `css/result.css`: skor dihitung naik sekali dengan cincin akurasi, rincian benar/salah/terlewat, soal keliru (jawabanmu, jawaban benar, penjelasan) di balik satu tombol; teks soal lewat textContent; dicoba di Chromium headless (HP portrait/landscape, TV), belum di perangkat
 - [ ] M5.6 Layar Pilih Bab / Pilih Mode
 - [ ] M5.7 Layar Cara Bermain
 - [ ] M5.8 Pengaturan (skeleton on/off; bawaan tampil saat bermain, kecepatan bola, suara)
@@ -103,8 +106,9 @@ Tiap milestone punya **Definisi selesai (DoD)** yang bisa dites langsung di HP.
 - [ ] M5.11 Petunjuk jarak berdiri di layar Kalibrasi
 - [ ] M5.12 Pilih dan bundel font ke `assets/fonts/` (offline), tetapkan skala tipografi
 - [ ] M5.13 Terapkan progressive disclosure (blueprint 13.4): kalibrasi hanya bila perlu, cara bermain sekali saja, pengaturan lanjutan di balik satu ikon, panel debug tersembunyi
-- [ ] M5.14 Penanda ujung jari berupa cincin tipis; efek pecah berupa cincin memudar
+- [x] M5.14 Penanda ujung jari berupa cincin tipis; efek pecah berupa cincin memudar — `js/ui/Effects.js` (dua cincin + selisih skor, kilat tepi saat salah), diberi event lewat `GameEngine.onEvent`; belum dilihat di perangkat
 - [ ] M5.15 Tinjau tiap layar dengan uji 13.6 (satu fokus, tidak pasaran, terbaca di HP dan TV)
+- [x] M5.16 Polish visual "premium" tanpa mengubah arah "udara & paru": token baru di `css/app.css` (kaca berasap, sorot tepi, bayang bertinta teal), latar udara + butiran halus saat kamera mati, gelembung kaca berlapis (CSS dan canvas sama resepnya), HUD kaca dengan garis sisa waktu soal dan nyawa berbentuk gelembung mini, kartu Jeda, status kamera bertitik. Tanpa backdrop-filter (hemat untuk papan TV). **Catatan:** `.veil` kini di bawah canvas overlay (sebelumnya menggelapkan gelembung dan teks); HUD portrait dipadatkan, tetapi soal tiga baris masih bisa menyentuh gelembung teratas sampai M5.9
 
 **DoD:** alur layar lengkap, siswa bisa main tanpa bantuan.
 

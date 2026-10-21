@@ -6,7 +6,8 @@
       "duration": 60,
       "lives": 3,
       "bubbleCount": 4,
-      "bubbleSpeed": 1.0,
+      "questionTime": 10,
+      "wobble": 1.0,
       "scoring": { "correct": 10, "wrong": -5 }
     }
   ]

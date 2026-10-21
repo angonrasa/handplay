@@ -1,3 +1,4 @@
+// js/ui/ScreenManager.js
 // ScreenManager — satu layar aktif pada satu waktu.
 // Layar didefinisikan di HTML lewat atribut data-screen="<nama>".
 export class ScreenManager {

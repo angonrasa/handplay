@@ -9,7 +9,7 @@ Game kuis IPA yang dimainkan dengan tangan di depan kamera. Dokumen rancangan ad
 
 ```
 index.html          halaman tunggal, semua layar di dalamnya
-css/                app.css (token desain), camera.css, game.css
+css/                app.css (token desain), camera.css, game.css, result.css (layar Hasil)
 js/                 modul per tanggung jawab (camera, tracking, gesture, game, ui)
 data/               games.json, settings.json, banks/ (bank soal per bab)
 assets/             mediapipe/, sfx/, fonts/

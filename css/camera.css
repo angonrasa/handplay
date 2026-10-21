@@ -1,14 +1,28 @@
 /* ==========================================================================
-   camera.css — lapisan belakang: video kamera, canvas overlay, veil warna.
+   camera.css — lapisan belakang: video kamera, canvas overlay, veil warna, kilat umpan balik.
    Video mengisi viewport dengan `cover` dan di-mirror (kamera depan).
+   Saat kamera mati (Home, Hasil) latar berupa "udara": cahaya lembut berlapis di atas teal gelap.
    ========================================================================== */
 
 .stage {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: var(--paru);
   overflow: hidden;
+  background:
+    radial-gradient(110% 85% at 84% 14%, rgba(142, 221, 203, 0.17) 0%, rgba(142, 221, 203, 0) 58%),
+    radial-gradient(90% 80% at 6% 104%, rgba(27, 84, 89, 0.6) 0%, rgba(27, 84, 89, 0) 62%),
+    linear-gradient(165deg, #0F3639 0%, var(--paru) 46%, var(--paru-dalam) 100%);
+}
+
+/* Butiran halus agar gradien tidak berpita. Ada di bawah video, jadi hanya terlihat saat kamera mati. */
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  pointer-events: none;
 }
 
 .camera,
@@ -29,24 +43,37 @@
   transform: scaleX(-1) scale(var(--zoom, 1));
 }
 
-/* Veil: menenangkan gambar kamera supaya gelembung dan teks tetap terbaca */
+/* Veil: menenangkan gambar kamera supaya gelembung dan teks tetap terbaca.
+   Atas lebih pekat (HUD), tengah paling jernih (tempat bermain), tepi digelapkan halus (vinyet). */
 .veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(12, 43, 46, 0.55) 0%,
-    rgba(12, 43, 46, 0.30) 100%
-  );
+  background:
+    radial-gradient(125% 105% at 50% 48%, rgba(7, 30, 33, 0) 46%, rgba(7, 30, 33, 0.40) 100%),
+    linear-gradient(180deg, rgba(7, 30, 33, 0.62) 0%, rgba(12, 43, 46, 0.24) 26%, rgba(12, 43, 46, 0.20) 72%, rgba(7, 30, 33, 0.42) 100%);
   pointer-events: none;
 }
 
 /* Layar yang berisi teks di atas kamera: veil lebih pekat agar teks tetap terbaca */
-body[data-screen="calibration"] .veil,
-body[data-screen="result"] .veil {
-  background: linear-gradient(
-    180deg,
-    rgba(12, 43, 46, 0.78) 0%,
-    rgba(12, 43, 46, 0.58) 100%
-  );
+body[data-screen="calibration"] .veil {
+  background:
+    radial-gradient(125% 105% at 50% 48%, rgba(7, 30, 33, 0.18) 30%, rgba(7, 30, 33, 0.55) 100%),
+    linear-gradient(180deg, rgba(7, 30, 33, 0.80) 0%, rgba(12, 43, 46, 0.62) 100%);
 }
+
+/* Kamera mati: tidak ada yang perlu ditenangkan, biarkan latar udara terlihat */
+body[data-screen="home"] .veil,
+body[data-screen="result"] .veil { background: none; }
+
+/* Kilat tepi saat jawaban salah: respons atas aksi pemain, bukan hiasan. Dipicu dari js/ui/Effects.js */
+.flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.flash[data-kind="wrong"] {
+  background: radial-gradient(120% 105% at 50% 50%, rgba(242, 112, 123, 0) 52%, rgba(242, 112, 123, 0.55) 100%);
+  animation: kilat 560ms var(--ease) both;
+}
+@keyframes kilat { from { opacity: 1; } to { opacity: 0; } }

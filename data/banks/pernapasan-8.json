@@ -6,24 +6,270 @@
       "id": "q001",
       "type": "pick-correct",
       "prompt": "Organ tempat pertukaran O₂ dan CO₂ di paru-paru?",
-      "correct": ["Alveolus"],
-      "distractors": ["Trakea", "Bronkus", "Faring"],
+      "correct": [
+        "Alveolus"
+      ],
+      "distractors": [
+        "Trakea",
+        "Bronkus",
+        "Faring"
+      ],
       "explain": "Pertukaran gas terjadi di alveolus karena dindingnya sangat tipis dan dikelilingi kapiler darah."
     },
     {
       "id": "q002",
       "type": "group",
       "prompt": "Pecahkan semua yang termasuk saluran pernapasan",
-      "correct": ["Laring", "Trakea", "Bronkus"],
-      "distractors": ["Esofagus", "Lambung", "Jantung"],
+      "correct": [
+        "Laring",
+        "Trakea",
+        "Bronkus"
+      ],
+      "distractors": [
+        "Esofagus",
+        "Lambung",
+        "Jantung"
+      ],
       "explain": "Esofagus dan lambung termasuk sistem pencernaan."
     },
     {
       "id": "q003",
       "type": "sequence",
       "prompt": "Urutan jalur udara saat inhalasi",
-      "sequence": ["Rongga hidung", "Faring", "Laring", "Trakea", "Bronkus", "Bronkiolus", "Alveolus"],
+      "sequence": [
+        "Rongga hidung",
+        "Faring",
+        "Laring",
+        "Trakea",
+        "Bronkus",
+        "Bronkiolus",
+        "Alveolus"
+      ],
       "explain": "Udara masuk dari luar menuju alveolus melalui saluran yang makin kecil."
+    },
+    {
+      "id": "q004",
+      "type": "pick-correct",
+      "prompt": "Otot berbentuk lembaran yang memisahkan rongga dada dan rongga perut?",
+      "correct": [
+        "Diafragma"
+      ],
+      "distractors": [
+        "Pleura",
+        "Epiglotis",
+        "Trakea"
+      ],
+      "explain": "Diafragma adalah otot pemisah rongga dada dan rongga perut. Saat berkontraksi ia mendatar, rongga dada membesar, dan udara masuk ke paru-paru."
+    },
+    {
+      "id": "q005",
+      "type": "pick-correct",
+      "prompt": "Nama lain batang tenggorokan adalah ...?",
+      "correct": [
+        "Trakea"
+      ],
+      "distractors": [
+        "Laring",
+        "Faring",
+        "Esofagus"
+      ],
+      "explain": "Trakea adalah batang tenggorokan, saluran napas dengan cincin tulang rawan berbentuk C yang menjaganya tetap terbuka. Esofagus adalah kerongkongan (saluran makanan)."
+    },
+    {
+      "id": "q006",
+      "type": "pick-correct",
+      "prompt": "Katup yang menutup saluran napas saat kita menelan makanan?",
+      "correct": [
+        "Epiglotis"
+      ],
+      "distractors": [
+        "Pita suara",
+        "Bronkiolus",
+        "Alveolus"
+      ],
+      "explain": "Epiglotis menutup pintu masuk laring saat menelan, sehingga makanan masuk ke kerongkongan dan tidak tersedak ke saluran napas."
+    },
+    {
+      "id": "q007",
+      "type": "pick-correct",
+      "prompt": "Gas yang dipakai sel untuk membakar zat makanan menjadi energi?",
+      "correct": [
+        "Oksigen"
+      ],
+      "distractors": [
+        "Nitrogen",
+        "Karbon dioksida",
+        "Helium"
+      ],
+      "explain": "Sel memakai oksigen untuk membongkar glukosa menjadi energi (respirasi seluler). Sisanya berupa karbon dioksida dan uap air."
+    },
+    {
+      "id": "q008",
+      "type": "pick-correct",
+      "prompt": "Zat pada sel darah merah yang mengikat oksigen?",
+      "correct": [
+        "Hemoglobin"
+      ],
+      "distractors": [
+        "Plasma",
+        "Trombosit",
+        "Insulin"
+      ],
+      "explain": "Hemoglobin mengandung zat besi. Di alveolus ia mengikat oksigen, lalu darah mengangkutnya ke seluruh tubuh."
+    },
+    {
+      "id": "q009",
+      "type": "pick-correct",
+      "prompt": "Proses masuknya udara ke paru-paru disebut ...?",
+      "correct": [
+        "Inspirasi"
+      ],
+      "distractors": [
+        "Ekspirasi",
+        "Fermentasi",
+        "Osmosis"
+      ],
+      "explain": "Inspirasi (inhalasi) terjadi saat diafragma dan otot antartulang rusuk berkontraksi, rongga dada membesar, dan udara masuk. Ekspirasi adalah kebalikannya."
+    },
+    {
+      "id": "q010",
+      "type": "pick-correct",
+      "prompt": "Gas sisa metabolisme yang dibuang tubuh lewat ekspirasi?",
+      "correct": [
+        "Karbon dioksida"
+      ],
+      "distractors": [
+        "Oksigen",
+        "Helium",
+        "Hidrogen"
+      ],
+      "explain": "Karbon dioksida adalah hasil sisa respirasi seluler. Darah membawanya ke paru-paru, lalu dibuang saat kita menghembuskan napas."
+    },
+    {
+      "id": "q011",
+      "type": "pick-correct",
+      "prompt": "Selaput tipis yang membungkus paru-paru?",
+      "correct": [
+        "Pleura"
+      ],
+      "distractors": [
+        "Perikardium",
+        "Peritoneum",
+        "Mukosa"
+      ],
+      "explain": "Pleura berlapis dua, dan di antaranya ada cairan yang mengurangi gesekan saat paru-paru mengembang. Perikardium membungkus jantung, peritoneum rongga perut."
+    },
+    {
+      "id": "q012",
+      "type": "pick-correct",
+      "prompt": "Rambut hidung dan lendir di rongga hidung berfungsi untuk ...?",
+      "correct": [
+        "Menyaring debu dan kuman"
+      ],
+      "distractors": [
+        "Mengikat oksigen",
+        "Menghasilkan suara",
+        "Mencerna makanan"
+      ],
+      "explain": "Rambut hidung dan lendir menangkap debu dan kuman, lalu silia menyapunya keluar, sehingga udara yang masuk ke paru-paru lebih bersih."
+    },
+    {
+      "id": "q013",
+      "type": "pick-correct",
+      "prompt": "Peradangan pada bronkus disebut ...?",
+      "correct": [
+        "Bronkitis"
+      ],
+      "distractors": [
+        "Laringitis",
+        "Pneumonia",
+        "Rinitis"
+      ],
+      "explain": "Bronkitis adalah peradangan bronkus. Laringitis menyerang laring, pneumonia menyerang alveolus di paru-paru, dan rinitis menyerang hidung."
+    },
+    {
+      "id": "q014",
+      "type": "pick-correct",
+      "prompt": "Radang paru-paru akibat infeksi, saat alveolus terisi cairan?",
+      "correct": [
+        "Pneumonia"
+      ],
+      "distractors": [
+        "Asma",
+        "Rinitis",
+        "Anemia"
+      ],
+      "explain": "Pada pneumonia alveolus terisi cairan atau nanah sehingga pertukaran gas terganggu dan penderita sesak napas."
+    },
+    {
+      "id": "q015",
+      "type": "pick-correct",
+      "prompt": "Penyempitan saluran napas akibat debu atau alergi, napas berbunyi \"mengi\"?",
+      "correct": [
+        "Asma"
+      ],
+      "distractors": [
+        "Tuberkulosis",
+        "Pneumonia",
+        "Anemia"
+      ],
+      "explain": "Asma terjadi karena saluran napas menyempit akibat pemicu seperti debu, alergi, atau udara dingin. Penderita sesak dan napasnya berbunyi mengi."
+    },
+    {
+      "id": "q016",
+      "type": "pick-correct",
+      "prompt": "Penyakit paru-paru menular akibat bakteri Mycobacterium tuberculosis?",
+      "correct": [
+        "Tuberkulosis (TBC)"
+      ],
+      "distractors": [
+        "Asma",
+        "Bronkitis",
+        "Emfisema"
+      ],
+      "explain": "TBC menular lewat percikan dahak penderita. Pencegahannya antara lain vaksin BCG, ruangan dengan ventilasi baik, dan berobat sampai tuntas."
+    },
+    {
+      "id": "q017",
+      "type": "pick-correct",
+      "prompt": "Zat dalam asap rokok yang membuat orang ketagihan?",
+      "correct": [
+        "Nikotin"
+      ],
+      "distractors": [
+        "Tar",
+        "Karbon monoksida",
+        "Oksigen"
+      ],
+      "explain": "Nikotin membuat ketagihan. Tar menempel dan merusak paru-paru, sedangkan karbon monoksida mengikat hemoglobin sehingga oksigen yang terangkut berkurang."
+    },
+    {
+      "id": "q018",
+      "type": "pick-correct",
+      "prompt": "Pertukaran gas di alveolus terjadi melalui proses ...?",
+      "correct": [
+        "Difusi"
+      ],
+      "distractors": [
+        "Osmosis",
+        "Filtrasi",
+        "Fermentasi"
+      ],
+      "explain": "Oksigen dan karbon dioksida berpindah dari tempat berkonsentrasi tinggi ke rendah (difusi) melewati dinding alveolus dan kapiler yang sangat tipis."
+    },
+    {
+      "id": "q019",
+      "type": "pick-correct",
+      "prompt": "Alat pernapasan ikan?",
+      "correct": [
+        "Insang"
+      ],
+      "distractors": [
+        "Paru-paru",
+        "Stomata",
+        "Kantung udara"
+      ],
+      "explain": "Ikan mengambil oksigen yang terlarut dalam air dengan insang. Stomata adalah alat pertukaran gas pada tumbuhan."
     }
   ]
 }

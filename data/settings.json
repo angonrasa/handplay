@@ -3,5 +3,10 @@
   "showSkeleton": false,
   "bubbleSpeed": 1.0,
   "sound": true,
-  "largeUI": false
+  "largeUI": false,
+  "apit": {
+    "centerTolerance": 0.5,
+    "closeRatio": 1.7,
+    "holdMs": 80
+  }
 }

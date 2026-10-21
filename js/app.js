@@ -5,7 +5,17 @@ import { Viewport } from './ui/Viewport.js';
 import { CameraManager } from './camera/CameraManager.js';
 import { HandTracker } from './tracking/HandTracker.js';
 import { LandmarkMapper } from './tracking/LandmarkMapper.js';
+import { GestureDetector } from './gesture/GestureDetector.js';
 import { SkeletonOverlay } from './ui/SkeletonOverlay.js';
+import { GameState, Phase } from './game/GameState.js';
+import { GameEngine } from './game/GameEngine.js';
+import { ModeRegistry } from './game/ModeRegistry.js';
+import { PickCorrectMode } from './game/modes/PickCorrectMode.js';
+import { QuestionBank } from './game/QuestionBank.js';
+import { drawBubbles } from './ui/BubbleRenderer.js';
+import { HUD } from './ui/HUD.js';
+import { Effects } from './ui/Effects.js';
+import { ResultScreen } from './ui/ResultScreen.js';
 
 const NEEDS_CAMERA = new Set(['calibration', 'game']);
 const HANG_MS = 6000; // jika izin kamera tak kunjung dijawab, beri petunjuk
@@ -35,9 +45,11 @@ const cameraContinue = document.getElementById('camera-continue');
 // Nanti diteruskan ke LandmarkMapper dan BubbleManager.
 export const layout = { viewport: null };
 
+let engine = null; // GameEngine, dibuat di bagian "Permainan" di bawah
 const viewport = new Viewport(stage, overlay, (state) => {
   layout.viewport = state;
   document.documentElement.dataset.orientation = state.orientation;
+  if (engine) engine.setArea(state); // layar diputar saat bermain → jeda otomatis (M4.3c)
 });
 viewport.start();
 
@@ -138,8 +150,58 @@ const skeleton = new SkeletonOverlay(overlay, mapper);
 let trackRun = 0;
 
 // Titik sentuh terbaru (koordinat layar): satu daftar 5 ujung jari per tangan, kosong bila tidak ada tangan.
-// Nanti dibaca GestureDetector (M3.5) dan Collision (M4.4).
+// Dibaca GestureDetector (M3.5).
 export const input = { fingertips: [] };
+
+// Gestur dari ujung jari. Game memanggil `gestures.match(bola, waktu)` tiap frame (M4.4) dan mendengarkan 'apit'.
+export const gestures = new GestureDetector();
+
+// Parameter apit dari data/settings.json (kunci `apit`). Gagal dimuat = pakai nilai cadangan di GestureDetector.
+// Ujicoba di perangkat tanpa mengubah berkas: ?center=0.5 (toleransi pusat), ?close=1.7 (jarak tutup), ?hold=80 (ms bertahan).
+async function loadApitSettings() {
+  let fromFile = {};
+  try {
+    const res = await fetch(new URL('../data/settings.json', import.meta.url));
+    if (res.ok) fromFile = (await res.json()).apit || {};
+  } catch (err) {
+    console.warn('[handplay] settings.json tidak dimuat, memakai nilai cadangan:', err?.message);
+  }
+  const num = (name) => (query.has(name) ? parseFloat(query.get(name)) : undefined);
+  const applied = gestures.setApit({
+    ...fromFile,
+    centerTolerance: num('center') ?? fromFile.centerTolerance,
+    closeRatio: num('close') ?? fromFile.closeRatio,
+    holdMs: num('hold') ?? fromFile.holdMs,
+  });
+  console.info('[handplay] parameter apit:', applied);
+}
+loadApitSettings();
+
+// Uji apit di perangkat: buka dengan ?apittest, tekan Mulai, lalu masuk ke layar game (js/debug/ApitTest.js).
+let apitTest = null;
+if (query.has('apittest')) {
+  import('./debug/ApitTest.js')
+    .then((m) => {
+      apitTest = m.mountApitTest({ gestures });
+      skeleton.addLayer(apitTest.draw);
+    })
+    .catch((err) => console.error('[handplay] ApitTest gagal dimuat:', err));
+}
+
+// Uji gelembung di perangkat (M4.2–M4.4): buka dengan ?bubbletest, tekan Mulai, lalu masuk ke layar game (js/debug/BubbleTest.js).
+if (query.has('bubbletest')) {
+  import('./debug/BubbleTest.js')
+    .then((m) => {
+      const bubbleTest = m.mountBubbleTest({
+        gestures,
+        overlay: skeleton,
+        getViewport: () => layout.viewport,
+        getScreen: () => screens.current,
+      });
+      skeleton.addLayer(bubbleTest.draw);
+    })
+    .catch((err) => console.error('[handplay] BubbleTest gagal dimuat:', err));
+}
 
 function onHands(hands) {
   const vp = layout.viewport;
@@ -153,10 +215,11 @@ function onHands(hands) {
     mirrored: video.classList.contains('is-mirrored'),
     zoom,
   });
-  if (!hands.length) mapper.resetSmoothing();
   const t = performance.now();
   input.fingertips = hands.map((hand, slot) => mapper.fingertips(hand, slot, t)).filter((tips) => tips.length);
-  skeleton.draw(hands, vp, input.fingertips);
+  gestures.update(input.fingertips, t);
+  if (apitTest) apitTest.update(vp, t);
+  skeleton.draw(hands, vp, input.fingertips, t);
 }
 
 // Kegagalan tracker tidak boleh menghalangi kamera: hanya dicatat (terlihat di panel ?debug).
@@ -178,7 +241,8 @@ function stopTracking() {
   tracker.stop();
   mapper.resetSmoothing();
   input.fingertips = [];
-  skeleton.clear();
+  gestures.update([]);
+  skeleton.reset();
 }
 
 // Kamera berhenti sendiri (dicabut / diambil app lain): kembali ke Kalibrasi.
@@ -190,17 +254,114 @@ camera.onEnded = () => {
 
 // ---------- Layar ----------
 
+// >>> sinkron-fase
+// Keadaan permainan. Layar dan fase saling mengikuti: navigasi layar menggerakkan fase, dan fase yang
+// digerakkan di luar navigasi (mis. waktu habis → result, jeda) menampilkan layar yang sesuai.
+export const state = new GameState();
+const SCREEN_PHASE = { home: Phase.HOME, calibration: Phase.CALIBRATION, game: Phase.PLAYING, result: Phase.RESULT };
+const PHASE_SCREEN = { [Phase.HOME]: 'home', [Phase.CALIBRATION]: 'calibration', [Phase.PLAYING]: 'game', [Phase.PAUSED]: 'game', [Phase.RESULT]: 'result' };
+
+function syncPhase(screenName) {
+  const next = SCREEN_PHASE[screenName];
+  if (!next) return;
+  try {
+    state.go(next);
+  } catch (err) {
+    console.error('[handplay]', err.message); // layar tetap tampil; masalah ini artinya ada navigasi yang belum didaftarkan di TRANSITIONS
+  }
+}
+// <<< sinkron-fase
+
 const screens = new ScreenManager(document.getElementById('screens'), {
   onChange: (name) => {
     document.body.dataset.screen = name;
+    syncPhase(name);
     if (NEEDS_CAMERA.has(name)) ensureCamera();
     else releaseCamera();
   },
 });
 
+// Fase digerakkan di luar navigasi layar: tampilkan layar yang sesuai (fase yang sama dengan layar aktif = tidak berbuat apa-apa).
+state.onPhase((phase) => {
+  const screen = PHASE_SCREEN[phase];
+  if (screen && screens.current !== screen) screens.show(screen);
+});
+
+// ---------- Permainan (M4.8) ----------
+
+const registry = new ModeRegistry();
+registry.register('pick-correct', PickCorrectMode);
+
+// Data dimuat sekali di awal. Gagal dimuat = layar game kosong dan galat tercatat di konsol.
+let bank = null;
+const dataUrl = (path) => new URL(path, import.meta.url);
+async function loadGameData() {
+  try {
+    const [games, loaded] = await Promise.all([
+      fetch(dataUrl('../data/games.json')).then((res) => res.json()),
+      QuestionBank.load(dataUrl('../data/banks/pernapasan-8.json').href),
+    ]);
+    bank = loaded;
+    engine.setConfig(games.modes.find((m) => m.id === 'pick-correct') || games.modes[0]);
+    if (bank.warnings && bank.warnings.length) console.warn('[handplay] peringatan bank soal:', bank.warnings);
+  } catch (err) {
+    console.error('[handplay] data game gagal dimuat:', err?.message || err);
+  }
+}
+
+// HUD (M5.3): hanya membaca gambaran engine; digambar tiap frame dan saat fase berganti.
+const hud = new HUD(document.getElementById('hud'));
+const resumeButton = document.getElementById('resume');
+const pauseCard = document.getElementById('pause');
+const resultScreen = new ResultScreen(document.getElementById('result'));
+// Umpan balik pecah (cincin memudar + kilat tepi saat salah): diberi event engine, digambar sebagai lapisan overlay.
+const effects = new Effects({ flashEl: document.getElementById('flash') });
+function renderHud() {
+  hud.render(engine.snapshot());
+}
+
+engine = new GameEngine({
+  state,
+  registry,
+  gestures,
+  getArea: () => layout.viewport,
+  onEvent: (event) => effects.handle(event),
+  getItems: (config) => {
+    const count = bank.byType('pick-correct').length;
+    return bank.draw({ type: 'pick-correct', count });
+  },
+  // Dipanggil tiap frame: gelembung bergerak halus walau deteksi tangan hanya 5–6 kali per detik.
+  onFrame: (t) => {
+    skeleton.redraw(layout.viewport, t);
+    renderHud();
+  },
+});
+loadGameData();
+
+// Gelembung digambar sebagai lapisan di atas kerangka/penanda jari.
+skeleton.addLayer((ctx, vp, t) => {
+  if (engine.visible) drawBubbles(ctx, engine.getBubbles(), t);
+});
+skeleton.addLayer((ctx, vp, t) => effects.draw(ctx, vp, t));
+
+state.onPhase((phase, previous) => {
+  resumeButton.hidden = phase !== Phase.PAUSED;
+  pauseCard.hidden = phase !== Phase.PAUSED;
+  if (phase === Phase.PLAYING && previous !== Phase.PAUSED) {
+    hud.reset(); // ronde baru
+    effects.clear();
+  }
+  if (phase === Phase.PLAYING || phase === Phase.PAUSED || phase === Phase.RESULT) renderHud();
+  if (phase === Phase.RESULT) {
+    resultScreen.render(engine.result);
+    console.info('[handplay] hasil ronde:', engine.result);
+  }
+});
+
 // Hemat baterai dan privasi: kamera mati saat tab/aplikasi tidak terlihat.
 document.addEventListener('visibilitychange', () => {
   if (!NEEDS_CAMERA.has(screens.current)) return;
+  if (document.hidden && state.phase === Phase.PLAYING) engine.pause();
   if (document.hidden) releaseCamera();
   else ensureCamera();
 });
@@ -215,6 +376,10 @@ document.addEventListener('click', (event) => {
   if (event.target.closest('[data-camera-retry]')) {
     releaseCamera(); // batalkan permintaan yang menggantung, lalu mulai ulang
     ensureCamera();
+    return;
+  }
+  if (event.target.closest('[data-resume]')) {
+    engine.resume();
     return;
   }
   const trigger = event.target.closest('[data-goto]');
@@ -235,6 +400,7 @@ if (handplay && handplay.debug) {
       getViewport: () => layout.viewport,
       getLastCameraError: () => lastCameraError,
       getTrackerStats: () => tracker.stats,
+      getPhase: () => state.phase,
       getZoom: () => zoom,
       changeZoom: (delta) => setZoom(zoom + delta),
       isSkeletonOn: () => skeleton.enabled,
