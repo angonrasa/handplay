@@ -152,7 +152,17 @@ function releaseCamera() {
 // ---------- Hand tracking (M2) ----------
 
 const detParam = parseInt(query.get('det'), 10);
-const tracker = new HandTracker({ numHands: 1, ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }) });
+// getZoom: detektor hanya melihat bagian video yang tampil di layar (tangan jauh jadi lebih besar). ?conf=0.3 menurunkan ambang deteksi.
+const confParam = parseFloat(query.get('conf'));
+// ?delegate=cpu mencoba deteksi di CPU (di TV lemah, GPU kadang justru lebih lambat).
+const delegateParam = (query.get('delegate') || '').toUpperCase();
+const tracker = new HandTracker({
+  numHands: 1,
+  ...(delegateParam === 'CPU' || delegateParam === 'GPU' ? { delegate: delegateParam } : {}),
+  getZoom: () => zoom,
+  ...(Number.isNaN(confParam) ? {} : { minConfidence: confParam }),
+  ...(Number.isNaN(detParam) ? {} : { inputHeight: detParam }),
+});
 // Ujicoba lewat alamat: ?smooth=0 mematikan smoothing ujung jari (untuk membandingkan).
 const mapper = new LandmarkMapper(query.get('smooth') === '0' ? { smoothing: null } : {});
 const skeleton = new SkeletonOverlay(overlay, mapper);

@@ -1,3 +1,4 @@
+// js/tracking/HandTracker.js
 // HandTracker — pembungkus MediaPipe Hand Landmarker (lapisan persepsi).
 // Output: data tangan (21 landmark + handedness). Tidak tahu aturan game.
 // Dibuat replaceable: kontrak keluaran tetap sama jika MediaPipe diganti.
@@ -78,13 +79,19 @@ async function pickSource() {
 
 export class HandTracker {
   /**
-   * @param {{ numHands?: number, delegate?: 'GPU'|'CPU', inputHeight?: number, createCanvas?: () => HTMLCanvasElement }} [options]
+   * @param {{ numHands?: number, delegate?: 'GPU'|'CPU', inputHeight?: number, getZoom?: () => number, minConfidence?: number, createCanvas?: () => HTMLCanvasElement }} [options]
+   *   getZoom: zoom digital yang sedang tampil. Bila > 1, hanya bagian tengah video yang dikirim ke MediaPipe (sama dengan yang terlihat
+   *   di layar), jadi tangan tampak lebih besar bagi detektor dan jarak deteksi bertambah. Landmark dikembalikan ke koordinat video penuh.
+   *   minConfidence: ambang deteksi/kehadiran/pelacakan tangan (bawaan MediaPipe 0,5; lebih rendah = tangan jauh lebih mudah ditangkap).
    *   inputHeight: tinggi gambar yang diberikan ke MediaPipe (px). Video 1080p diperkecil dulu
    *   karena deteksi di resolusi penuh lambat di perangkat lemah (TV/papan). 0 = pakai ukuran asli.
    */
-  constructor({ numHands = 1, delegate = 'GPU', inputHeight = 360, createCanvas = null } = {}) {
+  constructor({ numHands = 1, delegate = 'GPU', inputHeight = 360, getZoom = null, minConfidence = 0.4, createCanvas = null } = {}) {
     this.numHands = numHands; // MVP: satu tangan; angka ini parameter, bukan hard-code
     this.inputHeight = inputHeight;
+    this.getZoom = getZoom;
+    this.minConfidence = minConfidence;
+    this._crop = { x0: 0, y0: 0, w: 1, h: 1 }; // bagian video (0..1) yang dikirim ke MediaPipe
     this._createCanvas = createCanvas || (() => document.createElement('canvas'));
     this._canvas = null;
     this._ctx = null;
@@ -152,6 +159,9 @@ export class HandTracker {
         baseOptions: { modelAssetPath: src.model, delegate },
         runningMode: 'VIDEO',
         numHands: this.numHands,
+        minHandDetectionConfidence: this.minConfidence,
+        minHandPresenceConfidence: this.minConfidence,
+        minTrackingConfidence: this.minConfidence,
       });
 
     try {
@@ -199,7 +209,7 @@ export class HandTracker {
         const ts = Math.max(t0, this._lastTs + 1);
         this._lastTs = ts;
         try {
-          const hands = this.detect(this._source(video), ts);
+          const hands = this._toVideoSpace(this.detect(this._source(video), ts));
           failures = 0;
           this._record(performance.now() - t0, hands.length);
           onResult(hands);
@@ -219,26 +229,49 @@ export class HandTracker {
     schedule(tick);
   }
 
-  /** Frame yang dikirim ke MediaPipe: video penuh, atau salinan yang diperkecil (rasio sama, jadi koordinat 0..1 tetap berlaku). */
+  /**
+   * Frame yang dikirim ke MediaPipe: bagian tengah video sesuai zoom (bila zoom > 1), diperkecil ke `inputHeight`
+   * (rasio sama). Tanpa zoom dan video sudah kecil = video apa adanya.
+   */
   _source(video) {
+    const vw = video.videoWidth;
     const vh = video.videoHeight;
-    if (!this.inputHeight || vh <= this.inputHeight) {
-      this.inputSize = { width: video.videoWidth, height: vh };
+    const zoom = this.getZoom ? Math.max(1, Number(this.getZoom()) || 1) : 1;
+    const cropped = zoom > 1.001;
+    this._crop = cropped ? { x0: (1 - 1 / zoom) / 2, y0: (1 - 1 / zoom) / 2, w: 1 / zoom, h: 1 / zoom } : { x0: 0, y0: 0, w: 1, h: 1 };
+
+    const sw = vw * this._crop.w;
+    const sh = vh * this._crop.h;
+    if (!cropped && (!this.inputHeight || vh <= this.inputHeight)) {
+      this.inputSize = { width: vw, height: vh };
       return video;
     }
     if (!this._canvas) {
       this._canvas = this._createCanvas();
       this._ctx = this._canvas.getContext('2d', { alpha: false });
     }
-    const h = this.inputHeight;
-    const w = Math.round((video.videoWidth / vh) * h);
+    const h = this.inputHeight ? Math.min(this.inputHeight, Math.round(sh)) : Math.round(sh);
+    const w = Math.round((sw / sh) * h);
     if (this._canvas.width !== w || this._canvas.height !== h) {
       this._canvas.width = w;
       this._canvas.height = h;
     }
-    this._ctx.drawImage(video, 0, 0, w, h);
+    this._ctx.drawImage(video, vw * this._crop.x0, vh * this._crop.y0, sw, sh, 0, 0, w, h);
     this.inputSize = { width: w, height: h };
     return this._canvas;
+  }
+
+  /** Landmark hasil deteksi (koordinat potongan) → koordinat video penuh, supaya LandmarkMapper tidak perlu tahu soal potongan. */
+  _toVideoSpace(hands) {
+    const { x0, y0, w, h } = this._crop;
+    if (w === 1 && h === 1) return hands;
+    for (const hand of hands) {
+      for (const p of hand.landmarks) {
+        p.x = x0 + p.x * w;
+        p.y = y0 + p.y * h;
+      }
+    }
+    return hands;
   }
 
   stop() {

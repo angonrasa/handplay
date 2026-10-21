@@ -160,14 +160,28 @@ export class SkeletonOverlay {
     const ctx = this.ctx;
     ctx.globalAlpha = alpha;
     ctx.lineCap = 'round';
-    if (this.enabled) this._drawSkeleton(hands, u);
-    this._drawFingertips(fingertips, u);
+    // Ukuran gambar mengikuti ukuran tangan di layar (maksimal 1u): di TV, tangan yang jauh tampak kecil dan cincin
+    // seukuran layar akan saling menumpuk. Di HP tangan besar, jadi hasilnya tetap 1u seperti sebelumnya.
+    const scales = hands.map((hand) => this._handScale(hand, u));
+    if (this.enabled) this._drawSkeleton(hands, scales);
+    this._drawFingertips(fingertips, scales);
     ctx.globalAlpha = 1;
   }
 
-  _drawSkeleton(hands, u) {
+  // Satuan gambar untuk satu tangan: 3,5% jarak pergelangan → pangkal jari tengah, dibatasi 0,3u sampai 1u.
+  _handScale(hand, u) {
+    const wrist = this.mapper.toScreen(hand.landmarks[0]);
+    const knuckle = this.mapper.toScreen(hand.landmarks[9]);
+    if (!wrist || !knuckle) return u;
+    const span = Math.hypot(knuckle.x - wrist.x, knuckle.y - wrist.y);
+    return Math.min(u, Math.max(u * 0.3, span * 0.035));
+  }
+
+  _drawSkeleton(hands, scales) {
     const ctx = this.ctx;
-    for (const hand of hands) {
+    for (let h = 0; h < hands.length; h += 1) {
+      const hand = hands[h];
+      const u = scales[h];
       const pts = hand.landmarks.map((p) => this.mapper.toScreen(p));
       if (pts.some((p) => !p)) continue;
 
@@ -191,10 +205,12 @@ export class SkeletonOverlay {
 
   // Lima cincin tipis setara (jari mana pun boleh dipakai mengapit). Ukuran relatif ke sisi terpendek layar.
   // Cincin = area sentuh; titik kecil di tengah = titik yang sebenarnya dihitung; halo tipis menjaga terlihat di latar terang.
-  _drawFingertips(fingertips, u) {
+  _drawFingertips(fingertips, scales) {
     const ctx = this.ctx;
-    const r = u * 2.6;
-    for (const tips of fingertips) {
+    for (let h = 0; h < fingertips.length; h += 1) {
+      const tips = fingertips[h];
+      const u = scales[h] ?? scales[0] ?? 1;
+      const r = u * 2.6;
       for (const p of tips) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
