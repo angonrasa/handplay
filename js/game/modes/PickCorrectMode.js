@@ -31,7 +31,7 @@ export const PICK_DEFAULTS = Object.freeze({
   rowTopLandscape: 28,  // perkiraan batas atas deretan (u) bila tinggi HUD belum terukur, landscape
   rowTopPortrait: 42,   // idem, portrait (HUD lebih padat)
   rowBelowHud: 2.5,     // jarak minimum deretan di bawah HUD terukur (u)
-  rowAnchor: 0.6,       // posisi deretan di ruang kosong bawah HUD: 0 = menempel HUD, 1 = menempel batas bawah (?row= di alamat)
+  rowAnchor: 0.45,      // posisi deretan di ruang kosong bawah HUD: 0 = menempel HUD, 1 = menempel batas bawah (?row= di alamat)
   rowBottomU: 16,       // ruang kosong di tepi bawah (u): tombol Selesai dan jari yang menjangkau
   rowGap: 0.55,         // jarak antar gelembung (× radius terbesar)
 });
