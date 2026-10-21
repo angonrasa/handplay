@@ -16,6 +16,7 @@ import { drawBubbles } from './ui/BubbleRenderer.js';
 import { HUD } from './ui/HUD.js';
 import { Effects } from './ui/Effects.js';
 import { ResultScreen } from './ui/ResultScreen.js';
+import { SoundManager } from './audio/SoundManager.js';
 
 const NEEDS_CAMERA = new Set(['calibration', 'game']);
 const HANG_MS = 6000; // jika izin kamera tak kunjung dijawab, beri petunjuk
@@ -45,6 +46,7 @@ const cameraContinue = document.getElementById('camera-continue');
 // Nanti diteruskan ke LandmarkMapper dan BubbleManager.
 export const layout = { viewport: null };
 
+let perf = null; // PerfMeter (?perf)
 let engine = null; // GameEngine, dibuat di bagian "Permainan" di bawah
 const viewport = new Viewport(stage, overlay, (state) => {
   layout.viewport = state;
@@ -62,6 +64,13 @@ const bigScreen = Math.max(window.innerWidth, window.screen ? window.screen.widt
 const query = new URLSearchParams(window.location.search);
 const CAM_SIZES = { 480: [640, 480], 720: [1280, 720], 1080: [1920, 1080] };
 const camParam = CAM_SIZES[query.get('cam')];
+
+// Suara (M6.3). Dibuka lewat klik pertama pemain; bisa dimatikan di data/settings.json (`sound`) atau lewat ?mute.
+const sound = new SoundManager({ enabled: !query.has('mute') });
+
+// Batas FPS loop game: 30 di layar besar (TV/papan lemah), ikut layar di HP. Ujicoba: ?fps=60 atau ?fps=0 (tanpa batas).
+const fpsParam = parseInt(query.get('fps'), 10);
+const maxFps = Number.isNaN(fpsParam) ? (bigScreen ? 30 : 0) : fpsParam;
 const camSize = camParam ? { width: camParam[0], height: camParam[1] } : bigScreen ? { width: 1920, height: 1080 } : {};
 const camera = new CameraManager(video, camSize);
 
@@ -162,7 +171,11 @@ async function loadApitSettings() {
   let fromFile = {};
   try {
     const res = await fetch(new URL('../data/settings.json', import.meta.url));
-    if (res.ok) fromFile = (await res.json()).apit || {};
+    if (res.ok) {
+      const settings = await res.json();
+      fromFile = settings.apit || {};
+      if (settings.sound === false) sound.setEnabled(false);
+    }
   } catch (err) {
     console.warn('[handplay] settings.json tidak dimuat, memakai nilai cadangan:', err?.message);
   }
@@ -325,15 +338,21 @@ engine = new GameEngine({
   registry,
   gestures,
   getArea: () => layout.viewport,
-  onEvent: (event) => effects.handle(event),
+  maxFps,
+  onEvent: (event) => {
+    effects.handle(event);
+    sound.handle(event);
+  },
   getItems: (config) => {
     const count = bank.byType('pick-correct').length;
     return bank.draw({ type: 'pick-correct', count });
   },
   // Dipanggil tiap frame: gelembung bergerak halus walau deteksi tangan hanya 5–6 kali per detik.
   onFrame: (t) => {
+    const t0 = performance.now();
     skeleton.redraw(layout.viewport, t);
     renderHud();
+    if (perf) perf.frame(t, performance.now() - t0);
   },
 });
 loadGameData();
@@ -353,6 +372,7 @@ state.onPhase((phase, previous) => {
   }
   if (phase === Phase.PLAYING || phase === Phase.PAUSED || phase === Phase.RESULT) renderHud();
   if (phase === Phase.RESULT) {
+    sound.play('finish');
     resultScreen.render(engine.result);
     console.info('[handplay] hasil ronde:', engine.result);
   }
@@ -373,6 +393,7 @@ function enterFullscreen() {
 }
 
 document.addEventListener('click', (event) => {
+  sound.unlock(); // browser baru mengizinkan suara setelah sentuhan pemain
   if (event.target.closest('[data-camera-retry]')) {
     releaseCamera(); // batalkan permintaan yang menggantung, lalu mulai ulang
     ensureCamera();
@@ -410,6 +431,21 @@ if (handplay && handplay.debug) {
       },
     }))
     .catch((err) => console.error('[handplay] panel debug gagal dimuat:', err));
+}
+
+// ?perf: panel ukur FPS/beban (js/debug/PerfMeter.js), terpisah dari ?debug.
+if (query.has('perf')) {
+  import('./debug/PerfMeter.js')
+    .then((m) => {
+      perf = m.mountPerfMeter({
+        getTracker: () => tracker.stats,
+        getViewport: () => layout.viewport,
+        getCameraSize: () => camera.size,
+        getZoom: () => zoom,
+        maxFps,
+      });
+    })
+    .catch((err) => console.error('[handplay] PerfMeter gagal dimuat:', err));
 }
 
 // Penanda "aplikasi berhasil dimuat" untuk debug/bootstrap.js.

@@ -14,7 +14,7 @@ import { TEXT } from '../game/BubbleManager.js';
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const EMBUN = '#E9F2EE';
-const NAPAS = '142, 221, 203';
+const NAPAS = '52, 217, 182';
 const PARU_DALAM = '7, 30, 33';
 const PARU_SHADOW = `rgba(${PARU_DALAM}, 0.62)`;
 
@@ -79,8 +79,8 @@ export function drawBubble(ctx, b, time = 0) {
   // 2) Badan kaca: pantulan di kiri atas, hampir bening di tengah, tepi sedikit terang
   const glass = ctx.createRadialGradient(b.x - r * 0.4, b.y - r * 0.48, r * 0.05, b.x, b.y, r);
   glass.addColorStop(0, 'rgba(233, 242, 238, 0.50)');
-  glass.addColorStop(0.34, `rgba(${NAPAS}, 0.16)`);
-  glass.addColorStop(0.62, `rgba(${NAPAS}, 0.07)`);
+  glass.addColorStop(0.34, `rgba(${NAPAS}, 0.22)`);
+  glass.addColorStop(0.62, `rgba(${NAPAS}, 0.10)`);
   glass.addColorStop(1, 'rgba(233, 242, 238, 0.18)');
   ctx.fillStyle = glass;
   ctx.fill();
@@ -88,7 +88,7 @@ export function drawBubble(ctx, b, time = 0) {
   // 3) Cahaya tepi dalam: memberi ketebalan kaca
   const rim = ctx.createRadialGradient(b.x - r * 0.1, b.y - r * 0.12, r * 0.7, b.x, b.y, r * 1.02);
   rim.addColorStop(0, `rgba(${NAPAS}, 0)`);
-  rim.addColorStop(1, `rgba(${NAPAS}, 0.26)`);
+  rim.addColorStop(1, `rgba(${NAPAS}, 0.42)`);
   ctx.fillStyle = rim;
   ctx.fill();
 
@@ -96,10 +96,10 @@ export function drawBubble(ctx, b, time = 0) {
   const edge = ctx.createLinearGradient(b.x - r, b.y - r, b.x + r, b.y + r);
   edge.addColorStop(0, 'rgba(233, 242, 238, 0.92)');
   edge.addColorStop(0.4, 'rgba(233, 242, 238, 0.34)');
-  edge.addColorStop(0.7, 'rgba(233, 242, 238, 0.28)');
-  edge.addColorStop(1, `rgba(${NAPAS}, 0.78)`);
+  edge.addColorStop(0.7, `rgba(${NAPAS}, 0.55)`);
+  edge.addColorStop(1, `rgba(${NAPAS}, 1)`);
   ctx.strokeStyle = edge;
-  ctx.lineWidth = Math.max(1.5, r * 0.035);
+  ctx.lineWidth = Math.max(2, r * 0.05);
   ctx.stroke();
 
   // 5) Sorot lonjong di kiri atas

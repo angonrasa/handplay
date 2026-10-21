@@ -35,7 +35,7 @@ export class GameEngine {
    */
   constructor({
     state, registry, gestures, getItems, getArea,
-    config = null, sizeScale = 1, onEvent = null, onFrame = null,
+    config = null, sizeScale = 1, onEvent = null, onFrame = null, maxFps = 0,
     now = defaultNow, requestFrame, cancelFrame,
   } = {}) {
     if (!state || !registry || !gestures || typeof getItems !== 'function' || typeof getArea !== 'function') {
@@ -50,6 +50,7 @@ export class GameEngine {
     this.sizeScale = sizeScale;
     this.onEvent = onEvent;
     this.onFrame = onFrame;
+    this.setMaxFps(maxFps);
     this._now = now;
     this._request = requestFrame || (typeof requestAnimationFrame === 'function' ? (cb) => requestAnimationFrame(cb) : null);
     this._cancel = cancelFrame || (typeof cancelAnimationFrame === 'function' ? (id) => cancelAnimationFrame(id) : () => {});
@@ -68,6 +69,11 @@ export class GameEngine {
   /** Ganti konfigurasi mode (entri data/games.json). Berlaku mulai ronde berikutnya. */
   setConfig(config) {
     this.config = config;
+  }
+
+  /** Batasi frame loop (0 = ikut layar). Di TV lemah, 30 FPS memberi ruang bagi deteksi tangan yang memblokir thread utama. */
+  setMaxFps(fps) {
+    this.minFrameMs = fps > 0 ? 1000 / fps - 2 : 0; // longgar 2 ms: jam rAF tidak persis rata
   }
 
   /** Gelembung perlu digambar (bermain atau dijeda). */
@@ -175,6 +181,10 @@ export class GameEngine {
     this._raf = 0;
     if (!this._running) return;
     const t = this._now();
+    if (this.minFrameMs && t - this._last < this.minFrameMs) {
+      this._raf = this._request(this._loop); // terlalu cepat: lewati frame ini
+      return;
+    }
     const dt = Math.min(MAX_DT, Math.max(0, (t - this._last) / 1000));
     this._last = t;
     this.step(dt, t);

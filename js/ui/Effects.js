@@ -8,7 +8,7 @@
 // Jam yang dipakai sama dengan loop game: performance.now().
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const NAPAS = '142, 221, 203';   // --napas
+const NAPAS = '52, 217, 182';     // --napas
 const KAPILER = '242, 112, 123'; // --kapiler
 const PARU_DALAM = '7, 30, 33';  // --paru-dalam
 const DURATION_MS = 700;

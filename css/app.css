@@ -14,8 +14,8 @@
   --kabut:        #123F43;   /* permukaan terangkat */
   --kabut-terang: #1B5459;   /* tepi cahaya pada latar */
   --embun:        #E9F2EE;   /* teks utama */
-  --napas:        #8EDDCB;   /* aksen: benar / aksi utama */
-  --napas-terang: #B4EEDF;   /* puncak sorot pada tombol utama */
+  --napas:        #34D9B6;   /* aksen: benar / aksi utama */
+  --napas-terang: #7BF0D6;   /* puncak sorot pada tombol utama */
   --kapiler:      #F2707B;   /* salah */
   --embun-redup:  rgba(233, 242, 238, 0.72);
   --embun-sayup:  rgba(233, 242, 238, 0.52);
@@ -29,7 +29,7 @@
   /* Kedalaman: sorot 1px di tepi atas + bayang bertinta teal (bukan abu-abu) */
   --sorot:        inset 0 1px 0 rgba(233, 242, 238, 0.14);
   --bayang:       0 1px 2px rgba(3, 16, 18, 0.35), 0 12px 28px -12px rgba(3, 16, 18, 0.65);
-  --cahaya-napas: 0 8px 26px -8px rgba(142, 221, 203, 0.42);
+  --cahaya-napas: 0 8px 26px -8px rgba(52, 217, 182, 0.50);
 
   /* Satuan relatif: 1u = 1% dari sisi terpendek layar */
   --u: min(1vw, 1vh);
@@ -74,7 +74,7 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-::selection { background: rgba(142, 221, 203, 0.32); }
+::selection { background: rgba(52, 217, 182, 0.32); }
 
 /* ---------- Layar ---------- */
 
@@ -203,7 +203,7 @@ html, body {
 .hint[data-state="waiting"]::before { animation: denyut 1.4s var(--ease) infinite; } /* tanda menunggu, bukan hiasan */
 .hint[data-state="ready"]::before {
   background: var(--napas);
-  box-shadow: 0 0 0 0.3em rgba(142, 221, 203, 0.2);
+  box-shadow: 0 0 0 0.3em rgba(52, 217, 182, 0.28);
 }
 
 /* Pesan gagal memakai warna "salah" agar tidak terlewat; "waiting" hanya petunjuk, bukan galat */

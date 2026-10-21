@@ -18,11 +18,12 @@ const CONNECTIONS = [
   [13, 17], [17, 18], [18, 19], [19, 20],  // kelingking
   [0, 17],                                  // telapak
 ];
-const LINE = '#8EDDCB';                    // --napas
+const LINE = '#34D9B6';                    // --napas
 const DOT = '#E9F2EE';                     // --embun
 const MARK_BACK = 'rgba(12, 43, 46, 0.45)'; // --paru, pelindung kontras di atas video terang
 const MARK_FILL = 'rgba(233, 242, 238, 0.14)';
-const MARK_HALO = 'rgba(142, 221, 203, 0.32)'; // --napas, tipis
+const MARK_HALO = 'rgba(52, 217, 182, 0.55)'; // --napas, tipis
+const MARK_RING = '#34D9B6';               // --napas
 
 const defaultNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -202,8 +203,8 @@ export class SkeletonOverlay {
         ctx.strokeStyle = MARK_BACK;
         ctx.lineWidth = u * 0.9;
         ctx.stroke();
-        ctx.strokeStyle = DOT;
-        ctx.lineWidth = u * 0.45;
+        ctx.strokeStyle = MARK_RING;
+        ctx.lineWidth = u * 0.55;
         ctx.stroke();
 
         ctx.beginPath();

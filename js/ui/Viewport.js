@@ -1,9 +1,20 @@
+// js/ui/Viewport.js
 // Viewport — mengikuti ukuran area tampilan dan orientasi perangkat.
 // Menyamakan ukuran piksel canvas overlay dengan area tampilan, lalu
 // memberi tahu pihak lain (nanti: LandmarkMapper, BubbleManager) lewat onChange.
 // Orientasi tidak dikunci: portrait di HP, landscape di TV, semuanya diikuti.
 
-const MAX_DPR = 2; // batas kerapatan piksel agar canvas tetap ringan di layar besar
+const MAX_DPR = 2; // batas kerapatan piksel di HP
+const BIG_SCREEN_W = 1200; // lebar (px CSS) ke atas dianggap TV/papan interaktif
+
+// TV/papan interaktif sering melapor devicePixelRatio 2 (panel 4K): canvas jadi 4× lebih banyak piksel padahal
+// ditonton dari jauh. Di layar besar dipakai 1. Ujicoba: ?dpr=1|1.5|2 menimpa aturan ini.
+function pickDpr(width) {
+  const forced = parseFloat(new URLSearchParams(window.location.search).get('dpr'));
+  if (forced > 0) return Math.min(forced, 3);
+  const cap = width >= BIG_SCREEN_W ? 1 : MAX_DPR;
+  return Math.min(window.devicePixelRatio || 1, cap);
+}
 
 export class Viewport {
   /**
@@ -41,7 +52,7 @@ export class Viewport {
     const rect = this.element.getBoundingClientRect();
     const width = Math.round(rect.width);
     const height = Math.round(rect.height);
-    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    const dpr = pickDpr(width);
     if (width === 0 || height === 0) return;
 
     const prev = this.state;
